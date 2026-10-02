@@ -5,32 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Расписание</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:12px;font-family:-apple-system,Roboto,sans-serif;background:var(--tg-theme-bg-color,#fff);color:var(--tg-theme-text-color,#000)}
-.bar{display:flex;gap:6px;margin-bottom:10px}
-.tab,.btn,.chip{border:0;border-radius:10px;padding:9px 12px;font-size:15px;background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
+body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--tg-theme-bg-color,#fff);color:var(--tg-theme-text-color,#000);font-size:17px}
+.bar{display:flex;gap:8px;margin-bottom:12px}
+.tab,.btn,.chip{border:0;border-radius:11px;padding:11px 14px;font-size:16px;background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
 .tab{flex:1}
 .on{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
-.btn{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff);width:100%;margin-top:8px}
-.btn.red{background:#e53935}
-.nav{display:flex;justify-content:space-between;align-items:center;margin:6px 0;font-weight:600}
-.nav button{border:0;background:none;font-size:22px;color:var(--tg-theme-link-color,#3390ec)}
-h3{margin:14px 0 6px;font-size:15px;color:var(--tg-theme-hint-color,#888)}
-.card{background:var(--tg-theme-secondary-bg-color,#f0f0f0);border-radius:12px;padding:10px 12px;margin-bottom:8px}
-.card p{margin:4px 0;white-space:pre-wrap}
-small,.hint{color:var(--tg-theme-hint-color,#888)}
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
-.cell{padding:8px 0;border-radius:8px;font-size:14px;position:relative}
-.cell.has::after{content:'';position:absolute;bottom:2px;left:50%;width:5px;height:5px;margin-left:-2px;border-radius:50%;background:var(--tg-theme-button-color,#3390ec)}
+.btn{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff);width:100%;margin-top:9px}
+.btn.secondary{background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
+.btn.red{background:#e53935;color:#fff}
+.nav{display:flex;justify-content:space-between;align-items:center;margin:8px 0 11px;font-weight:700;font-size:17px}
+.nav button{border:0;background:none;font-size:26px;color:var(--tg-theme-link-color,#3390ec);padding:0 8px}
+h3{margin:0 0 7px;font-size:16px;color:var(--tg-theme-hint-color,#777)}
+.day-block{background:#e2c499;border-radius:13px;padding:11px 12px;margin-bottom:10px}
+.card{background:#e2c499;border-radius:11px;padding:12px 13px;margin-bottom:9px}
+.card p{margin:6px 0;white-space:pre-wrap;font-size:15.5px;line-height:1.35}
+small,.hint{color:var(--tg-theme-hint-color,#777);font-size:14px}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.difficulty{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
+.difficulty.easy{background:#78a5a3}
+.difficulty.medium{background:#e1b16a}
+.difficulty.hard{background:#ce5a57}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+.cell{padding:10px 0;border-radius:9px;font-size:15px;position:relative;background:#e2c499;min-height:39px}
+.cell.has::after{content:'';position:absolute;bottom:3px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#555}
 .cell.sel{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
-.cell.today{font-weight:700;text-decoration:underline}
+.cell.today{font-weight:800;text-decoration:underline}
+.weekday{padding:5px 0;font-size:13px;color:var(--tg-theme-hint-color,#777)}
 #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:flex-end;z-index:9}
-#box{background:var(--tg-theme-bg-color,#fff);width:100%;max-height:90%;overflow:auto;border-radius:16px 16px 0 0;padding:16px}
-input,textarea{width:100%;padding:10px;margin:4px 0 8px;border-radius:8px;border:1px solid var(--tg-theme-hint-color,#ccc);background:var(--tg-theme-secondary-bg-color,#fff);color:var(--tg-theme-text-color,#000);font-size:16px;font-family:inherit}
-.chip{display:inline-block;margin:0 6px 6px 0}
-#err{color:#e53935;margin:6px 0}
-</style>
+#box{background:var(--tg-theme-bg-color,#fff);width:100%;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;padding:18px}
+input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px;border:1px solid var(--tg-theme-hint-color,#bbb);background:var(--tg-theme-secondary-bg-color,#fff);color:var(--tg-theme-text-color,#000);font-size:17px;font-family:inherit}
+.chip{display:inline-block;margin:0 7px 7px 0;cursor:pointer}
+#err{color:#e53935;margin:7px 0;line-height:1.35}
+.import-note{font-size:14px;line-height:1.4;color:var(--tg-theme-hint-color,#777)}
+.import-summary{margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--tg-theme-secondary-bg-color,#eee)}
+.footer-gap{height:4px}
+</style></style>
 </head>
 <body>
 <div class="bar">
@@ -42,13 +54,14 @@ input,textarea{width:100%;padding:10px;margin:4px 0 8px;border-radius:8px;border
 <div id="err"></div>
 <div id="main">Загрузка...</div>
 <button class="btn" onclick="openEdit()">+ Добавить задание</button>
+<button class="btn secondary" onclick="openImport()">📥 Загрузить расписание</button>
 <div id="modal"><div id="box"></div></div>
 
 <script>
 // === ВСТАВЬ СЮДА URL веб-приложения Apps Script (заканчивается на /exec) ===
-const API = 'https://script.google.com/macros/s/AKfycbxiGD_R2iVYjLzlYuYUdgEp7VT8Q5AZpMi3OsgVM_oRJqDhuOanFikBZyHBonlpQX89/exec';
+const API = 'https://script.google.com/macros/s/AKfycbxrDr7gOQdW1QxfYblkd1xbN7oqzVrGBRZJFSEOS5rhyyw9YexJpBa-3Glg6aSKW90y/exec';
 
-const tg = Telegram.WebApp; tg.expand();
+const tg = Telegram.WebApp; tg.ready(); tg.expand();
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today = () => new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Moscow'});
@@ -61,42 +74,126 @@ let S = {tasks: [], rem: [1440, 60]}, view = 'list', cur = today(), sel = today(
 
 async function api(action, data = {}) {
   $('#err').textContent = '';
+
   try {
-    const r = await fetch(API, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
-      body: JSON.stringify({action, initData: tg.initData, ...data})});
+    if (!tg.initData) {
+      throw new Error('Telegram initData не получен. Откройте приложение из Telegram.');
+    }
+
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action, initData: tg.initData, ...data})
+    });
+
     const j = await r.json();
+
     if (j.error) throw new Error(j.error);
-    S = j; render();
-  } catch (e) { $('#err').textContent = 'Ошибка: ' + e.message; $('#main').textContent = ''; }
+
+    S = j;
+    render();
+    return j;
+
+  } catch (e) {
+    $('#err').textContent = 'Ошибка: ' + e.message;
+    return null;
+  }
 }
 
-const card = t => `<div class="card" onclick="openEdit('${t.id}')"><b>${esc(t.subject)}</b> <small>${t.time}</small>
-  <p>${esc(t.description)}</p><small>— ${esc(t.author)}</small></div>`;
-const day = d => { const l = S.tasks.filter(t => t.date === d); return l.length ? l.map(card).join('') : '<small>Пусто</small>'; };
+
+
+function difficultyLabel(value) {
+  return value === 'easy' ? 'Легкий' : value === 'hard' ? 'Тяжелый' : 'Средний';
+}
+
+function card(t) {
+  const difficulty = t.difficulty || 'medium';
+
+  return '<div class="card" onclick="openEdit(\'' + esc(t.id) + '\')">' +
+    '<div class="meta"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' +
+      '<span class="difficulty ' + difficulty + '">' + difficultyLabel(difficulty) + '</span></div>' +
+    (t.description ? '<p>' + esc(t.description) + '</p>' : '') +
+    '<small>— ' + esc(t.author || 'Пользователь') + '</small></div>';
+}
+
+function day(d) {
+  const list = S.tasks.filter(t => t.date === d)
+    .sort((x,y) => (x.time || '').localeCompare(y.time || ''));
+
+  return list.length ? list.map(card).join('') : '<small>Пусто</small>';
+}
+
+function dayBlock(d) {
+  return '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' +
+    day(d) + '</section>';
+}
+
+
 
 function render() {
-  document.querySelectorAll('.tab[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  document.querySelectorAll('.tab[data-v]').forEach(b =>
+    b.classList.toggle('on', b.dataset.v === view)
+  );
+
   let h = '';
+
   if (view === 'list') {
-    const up = S.tasks.filter(t => t.date >= today());
+    const up = S.tasks
+      .filter(t => t.date >= today())
+      .sort((x,y) => (x.date + x.time).localeCompare(y.date + y.time));
+
     const dates = [...new Set(up.map(t => t.date))];
-    h = dates.length ? dates.map(d => `<h3>${fmt(d)}</h3>` + up.filter(t => t.date === d).map(card).join('')).join('') : '<p class="hint">Заданий пока нет</p>';
+
+    h = dates.length
+      ? dates.map(dayBlock).join('')
+      : '<p class="hint">Заданий пока нет</p>';
+
   } else if (view === 'week') {
     const st = addD(cur, -((D(cur).getDay() + 6) % 7));
-    h = `<div class="nav"><button onclick="shift(-1)">‹</button><span>${fmt(st)} – ${fmt(addD(st, 6))}</span><button onclick="shift(1)">›</button></div>`;
-    for (let i = 0; i < 7; i++) h += `<h3>${fmt(addD(st, i))}</h3>` + day(addD(st, i));
+
+    h = '<div class="nav"><button onclick="shift(-1)">‹</button>' +
+      '<span>' + esc(fmt(st)) + ' – ' + esc(fmt(addD(st, 6))) + '</span>' +
+      '<button onclick="shift(1)">›</button></div>';
+
+    for (let i = 0; i < 7; i++) {
+      h += dayBlock(addD(st, i));
+    }
+
   } else {
-    const d = D(cur), y = d.getFullYear(), m = d.getMonth(), lead = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
-    h = `<div class="nav"><button onclick="shift(-1)">‹</button><span>${d.toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span><button onclick="shift(1)">›</button></div><div class="grid">`;
-    h += ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(x => `<small>${x}</small>`).join('') + '<div></div>'.repeat(lead);
+    const d = D(cur);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const lead = (new Date(y, m, 1).getDay() + 6) % 7;
+    const n = new Date(y, m + 1, 0).getDate();
+
+    h = '<div class="nav"><button onclick="shift(-1)">‹</button>' +
+      '<span>' + esc(d.toLocaleDateString('ru-RU', {month:'long', year:'numeric'})) +
+      '</span><button onclick="shift(1)">›</button></div><div class="grid">';
+
+    h += ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
+      .map(x => '<div class="weekday">' + x + '</div>')
+      .join('');
+
+    h += '<div></div>'.repeat(lead);
+
     for (let i = 1; i <= n; i++) {
       const s = F(new Date(y, m, i));
-      h += `<div class="cell ${S.tasks.some(t => t.date === s) ? 'has' : ''} ${s === sel ? 'sel' : ''} ${s === today() ? 'today' : ''}" onclick="sel='${s}';render()">${i}</div>`;
+
+      h += '<div class="cell ' +
+        (S.tasks.some(t => t.date === s) ? 'has ' : '') +
+        (s === sel ? 'sel ' : '') +
+        (s === today() ? 'today' : '') +
+        '" onclick="sel=\'' + s + '\';render()">' +
+        i + '</div>';
     }
-    h += `</div><h3>${fmt(sel)}</h3>` + day(sel);
+
+    h += '</div><div class="footer-gap"></div>' + dayBlock(sel);
   }
+
   $('#main').innerHTML = h;
 }
+
+
 
 function shift(n) {
   const d = D(cur);
@@ -109,28 +206,196 @@ const closeM = () => $('#modal').style.display = 'none';
 $('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
 
 function openEdit(id) {
-  const t = S.tasks.find(x => x.id === id) || {date: view === 'month' ? sel : today(), time: '09:00'};
-  modal(`<h3>${id ? 'Редактировать' : 'Новое задание'}</h3>
-    <input id="f_s" placeholder="Предмет" value="${esc(t.subject)}">
-    <input id="f_d" type="date" value="${t.date}"><input id="f_t" type="time" value="${t.time}">
-    <textarea id="f_x" rows="4" placeholder="Что задано">${esc(t.description)}</textarea>
-    <button class="btn" onclick="save('${id || ''}')">Сохранить</button>
-    ${id ? `<button class="btn red" onclick="del('${id}')">Удалить</button>` : ''}`);
+  const t = S.tasks.find(x => x.id === id) || {
+    date: view === 'month' ? sel : today(),
+    time: '09:00',
+    difficulty: 'medium'
+  };
+
+  const difficulty = t.difficulty || 'medium';
+
+  modal(
+    '<h3>' + (id ? 'Редактировать' : 'Новое задание') + '</h3>' +
+    '<input id="f_s" placeholder="Предмет" value="' + esc(t.subject || '') + '">' +
+    '<input id="f_d" type="date" value="' + esc(t.date || today()) + '">' +
+    '<input id="f_t" type="time" value="' + esc(t.time || '09:00') + '">' +
+    '<select id="f_diff">' +
+      '<option value="easy" ' + (difficulty === 'easy' ? 'selected' : '') + '>Легкий</option>' +
+      '<option value="medium" ' + (difficulty === 'medium' ? 'selected' : '') + '>Средний</option>' +
+      '<option value="hard" ' + (difficulty === 'hard' ? 'selected' : '') + '>Тяжелый</option>' +
+    '</select>' +
+    '<textarea id="f_x" rows="4" placeholder="Что задано">' + esc(t.description || '') + '</textarea>' +
+    '<button class="btn" onclick="save(\'' + esc(id || '') + '\')">Сохранить</button>' +
+    (id ? '<button class="btn red" onclick="del(\'' + esc(id) + '\')">Удалить</button>' : '')
+  );
 }
 
-function save(id) {
-  api('save', {task: {id, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value, description: $('#f_x').value.trim()}});
-  closeM();
+
+
+async function save(id) {
+  const result = await api('save', {
+    task: {
+      id,
+      subject: $('#f_s').value.trim(),
+      date: $('#f_d').value,
+      time: $('#f_t').value,
+      difficulty: $('#f_diff').value,
+      description: $('#f_x').value.trim()
+    }
+  });
+
+  if (result) closeM();
 }
+
 function del(id) { tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } }); }
+
+let pendingImport = [];
+
+function openImport() {
+  pendingImport = [];
+
+  modal(
+    '<h3>Загрузить расписание</h3>' +
+    '<p class="import-note">Поддерживаются XLSX, XLS и CSV. В первой строке нужны заголовки: <b>Дата, Время, Предмет, Что задано, Сложность</b>.<br><br>' +
+    'Пример: <b>28.09.2026 | 15:30 | Математика | Решить №1–5 | Средний</b>.</p>' +
+    '<input id="import_file" type="file" accept=".xlsx,.xls,.csv">' +
+    '<div id="import_status" class="import-summary">Выбери файл.</div>' +
+    '<button class="btn" onclick="runImport()" disabled id="import_btn">Загрузить задания</button>'
+  );
+
+  $('#import_file').addEventListener('change', onImportFile);
+}
+
+async function onImportFile(event) {
+  const file = event.target.files && event.target.files[0];
+  pendingImport = [];
+
+  if (!file) return;
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, {type:'array', cellDates:true});
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+
+    pendingImport = rows.map(normalizeImportRow).filter(Boolean);
+
+    $('#import_status').textContent =
+      'Готово к загрузке: ' + pendingImport.length + ' заданий.';
+    $('#import_btn').disabled = pendingImport.length === 0;
+
+  } catch (e) {
+    $('#import_status').textContent =
+      'Не удалось прочитать файл: ' + e.message;
+    $('#import_btn').disabled = true;
+  }
+}
+
+function normHeader(value) {
+  return String(value || '').trim().toLowerCase()
+    .replace(/ё/g, 'ё')
+    .replace(/[\s_\-]+/g, ' ');
+}
+
+function col(row, names) {
+  for (const key of Object.keys(row)) {
+    if (names.includes(normHeader(key))) return row[key];
+  }
+  return '';
+}
+
+function parseImportDate(value) {
+  if (value instanceof Date && !isNaN(value)) {
+    return value.getFullYear() + '-' +
+      String(value.getMonth()+1).padStart(2,'0') + '-' +
+      String(value.getDate()).padStart(2,'0');
+  }
+
+  const text = String(value || '').trim();
+  let m = text.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+
+  if (m) {
+    return m[3] + '-' +
+      m[2].padStart(2,'0') + '-' +
+      m[1].padStart(2,'0');
+  }
+
+  m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+
+  return m
+    ? m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0')
+    : '';
+}
+
+function parseImportTime(value) {
+  if (value instanceof Date && !isNaN(value)) {
+    return String(value.getHours()).padStart(2,'0') + ':' +
+      String(value.getMinutes()).padStart(2,'0');
+  }
+
+  if (typeof value === 'number' && value >= 0 && value < 1) {
+    const total = Math.round(value * 24 * 60);
+    return String(Math.floor(total/60) % 24).padStart(2,'0') + ':' +
+      String(total % 60).padStart(2,'0');
+  }
+
+  const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})/);
+
+  return m ? m[1].padStart(2,'0') + ':' + m[2] : '';
+}
+
+function parseImportDifficulty(value) {
+  const v = normHeader(value);
+
+  if (v === 'easy' || v === 'легкий' || v === '1') return 'easy';
+  if (v === 'hard' || v === 'тяжелый' || v === 'трудный' || v === '3') return 'hard';
+
+  return 'medium';
+}
+
+function normalizeImportRow(row) {
+  const date = parseImportDate(col(row, ['дата','date']));
+  const time = parseImportTime(col(row, ['время','time']));
+  const subject = String(col(row, ['предмет','дисциплина','subject']) || '').trim();
+  const description = String(col(row, ['что задано','задание','домашнее задание','описание','description']) || '').trim();
+  const difficulty = parseImportDifficulty(col(row, ['сложность','difficulty','уровень']));
+
+  if (!date || !time || !subject) return null;
+
+  return {date, time, subject, description, difficulty};
+}
+
+async function runImport() {
+  if (!pendingImport.length) return;
+
+  const button = $('#import_btn');
+  button.disabled = true;
+  button.textContent = 'Загрузка...';
+
+  const result = await api('importTasks', {tasks: pendingImport});
+
+  if (result) {
+    closeM();
+  } else {
+    button.disabled = false;
+    button.textContent = 'Загрузить задания';
+  }
+}
 
 const OPTS = [[1440, 'за 1 день'], [180, 'за 3 часа'], [60, 'за 1 час'], [30, 'за 30 минут'], [10, 'за 10 минут']];
 $('#bell').onclick = () => {
   modal(`<h3>Когда напоминать о заданиях</h3><div>${OPTS.map(([m, l]) =>
     `<button class="chip ${S.rem.includes(m) ? 'on' : ''}" onclick="tgl(${m},this)">${l}</button>`).join('')}</div>
     <p class="hint">Ничего не выбрано — напоминаний не будет. Время — МСК.</p>
-    <button class="btn" onclick="api('setReminders',{rem:S.rem});closeM()">Сохранить</button>`);
+    <button class="btn" onclick="saveReminders()">Сохранить</button>`);
 };
+
+async function saveReminders() {
+  const result = await api('setReminders', {rem: S.rem});
+  if (result) closeM();
+}
+
+
 function tgl(m, el) {
   S.rem = S.rem.includes(m) ? S.rem.filter(x => x !== m) : [...S.rem, m].sort((a, b) => b - a);
   el.classList.toggle('on');
