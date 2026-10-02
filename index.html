@@ -16,20 +16,24 @@ body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe U
 .btn{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff);width:100%;margin-top:9px}
 .btn.secondary{background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
 .btn.red{background:#e53935;color:#fff}
+.btn:disabled{opacity:.5}
 .nav{display:flex;justify-content:space-between;align-items:center;margin:8px 0 11px;font-weight:700;font-size:17px}
 .nav button{border:0;background:none;font-size:26px;color:var(--tg-theme-link-color,#3390ec);padding:0 8px}
 h3{margin:0 0 7px;font-size:16px;color:var(--tg-theme-hint-color,#777)}
-.day-block{background:#e2c499;border-radius:13px;padding:11px 12px;margin-bottom:10px}
-.card{background:#e2c499;border-radius:11px;padding:12px 13px;margin-bottom:9px}
+.day-block{background:#e2c499;border-radius:13px;padding:11px 12px;margin-bottom:10px;color:#000}
+.card{background:#e2c499;border-radius:11px;padding:12px 13px;margin-bottom:9px;color:#000}
+.day-block .card{background:#ecd5b0}
 .card p{margin:6px 0;white-space:pre-wrap;font-size:15.5px;line-height:1.35}
 small,.hint{color:var(--tg-theme-hint-color,#777);font-size:14px}
+.day-block small,.card small{color:#6b5a3e}
 .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.edit{margin-left:auto;font-size:18px;padding:2px 6px;cursor:pointer}
 .difficulty{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
 .difficulty.easy{background:#78a5a3}
 .difficulty.medium{background:#e1b16a}
 .difficulty.hard{background:#ce5a57}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
-.cell{padding:10px 0;border-radius:9px;font-size:15px;position:relative;background:#e2c499;min-height:39px}
+.cell{padding:10px 0;border-radius:9px;font-size:15px;position:relative;background:#e2c499;min-height:39px;color:#000}
 .cell.has::after{content:'';position:absolute;bottom:3px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#555}
 .cell.sel{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
 .cell.today{font-weight:800;text-decoration:underline}
@@ -42,7 +46,7 @@ input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px
 .import-note{font-size:14px;line-height:1.4;color:var(--tg-theme-hint-color,#777)}
 .import-summary{margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--tg-theme-secondary-bg-color,#eee)}
 .footer-gap{height:4px}
-</style></style>
+</style>
 </head>
 <body>
 <div class="bar">
@@ -58,15 +62,16 @@ input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px
 <div id="modal"><div id="box"></div></div>
 
 <script>
-// === ВСТАВЬ СЮДА URL веб-приложения Apps Script (заканчивается на /exec) ===
+// URL веб-приложения Apps Script (заканчивается на /exec)
 const API = 'https://script.google.com/macros/s/AKfycbxrDr7gOQdW1QxfYblkd1xbN7oqzVrGBRZJFSEOS5rhyyw9YexJpBa-3Glg6aSKW90y/exec';
 
 const tg = Telegram.WebApp; tg.ready(); tg.expand();
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
 const today = () => new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Moscow'});
 const D = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
-const F = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const F = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const addD = (s, n) => { const d = D(s); d.setDate(d.getDate() + n); return F(d); };
 const fmt = s => D(s).toLocaleDateString('ru-RU', {weekday: 'short', day: 'numeric', month: 'long'});
 
@@ -74,126 +79,77 @@ let S = {tasks: [], rem: [1440, 60]}, view = 'list', cur = today(), sel = today(
 
 async function api(action, data = {}) {
   $('#err').textContent = '';
-
   try {
-    if (!tg.initData) {
-      throw new Error('Telegram initData не получен. Откройте приложение из Telegram.');
-    }
-
+    if (!tg.initData) throw new Error('Telegram initData не получен. Откройте приложение из Telegram.');
     const r = await fetch(API, {
       method: 'POST',
       headers: {'Content-Type': 'text/plain;charset=utf-8'},
       body: JSON.stringify({action, initData: tg.initData, ...data})
     });
-
     const j = await r.json();
-
     if (j.error) throw new Error(j.error);
-
-    S = j;
-    render();
+    S = j; render();
     return j;
-
   } catch (e) {
     $('#err').textContent = 'Ошибка: ' + e.message;
+    $('#main').textContent = S.tasks.length ? '' : $('#main').textContent === 'Загрузка...' ? '' : $('#main').textContent;
     return null;
   }
 }
 
+const difficultyLabel = v => v === 'easy' ? 'Легкий' : v === 'hard' ? 'Тяжелый' : 'Средний';
 
-
-function difficultyLabel(value) {
-  return value === 'easy' ? 'Легкий' : value === 'hard' ? 'Тяжелый' : 'Средний';
-}
-
+// Карточка задания: нажатие на неё ИЛИ на ✏️ открывает редактирование
 function card(t) {
-  const difficulty = t.difficulty || 'medium';
-
-  return '<div class="card" onclick="openEdit(\'' + esc(t.id) + '\')">' +
+  const diff = t.difficulty || 'medium';
+  const id = esc(t.id);
+  return '<div class="card" onclick="openEdit(\'' + id + '\')">' +
     '<div class="meta"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' +
-      '<span class="difficulty ' + difficulty + '">' + difficultyLabel(difficulty) + '</span></div>' +
+    '<span class="difficulty ' + diff + '">' + difficultyLabel(diff) + '</span>' +
+    '<span class="edit" onclick="event.stopPropagation();openEdit(\'' + id + '\')">✏️</span></div>' +
     (t.description ? '<p>' + esc(t.description) + '</p>' : '') +
     '<small>— ' + esc(t.author || 'Пользователь') + '</small></div>';
 }
 
 function day(d) {
-  const list = S.tasks.filter(t => t.date === d)
-    .sort((x,y) => (x.time || '').localeCompare(y.time || ''));
-
+  const list = S.tasks.filter(t => t.date === d).sort((x, y) => (x.time || '').localeCompare(y.time || ''));
   return list.length ? list.map(card).join('') : '<small>Пусто</small>';
 }
 
-function dayBlock(d) {
-  return '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' +
-    day(d) + '</section>';
-}
-
-
+const dayBlock = d => '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' + day(d) + '</section>';
 
 function render() {
-  document.querySelectorAll('.tab[data-v]').forEach(b =>
-    b.classList.toggle('on', b.dataset.v === view)
-  );
-
+  document.querySelectorAll('.tab[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view));
   let h = '';
 
   if (view === 'list') {
-    const up = S.tasks
-      .filter(t => t.date >= today())
-      .sort((x,y) => (x.date + x.time).localeCompare(y.date + y.time));
-
-    const dates = [...new Set(up.map(t => t.date))];
-
-    h = dates.length
-      ? dates.map(dayBlock).join('')
-      : '<p class="hint">Заданий пока нет</p>';
+    const up = S.tasks.filter(t => t.date >= today());
+    const dates = [...new Set(up.map(t => t.date))].sort();
+    h = dates.length ? dates.map(dayBlock).join('') : '<p class="hint">Заданий пока нет</p>';
 
   } else if (view === 'week') {
     const st = addD(cur, -((D(cur).getDay() + 6) % 7));
-
-    h = '<div class="nav"><button onclick="shift(-1)">‹</button>' +
-      '<span>' + esc(fmt(st)) + ' – ' + esc(fmt(addD(st, 6))) + '</span>' +
-      '<button onclick="shift(1)">›</button></div>';
-
-    for (let i = 0; i < 7; i++) {
-      h += dayBlock(addD(st, i));
-    }
+    h = '<div class="nav"><button onclick="shift(-1)">‹</button><span>' + esc(fmt(st)) + ' – ' + esc(fmt(addD(st, 6))) +
+      '</span><button onclick="shift(1)">›</button></div>';
+    for (let i = 0; i < 7; i++) h += dayBlock(addD(st, i));
 
   } else {
-    const d = D(cur);
-    const y = d.getFullYear();
-    const m = d.getMonth();
-    const lead = (new Date(y, m, 1).getDay() + 6) % 7;
-    const n = new Date(y, m + 1, 0).getDate();
-
-    h = '<div class="nav"><button onclick="shift(-1)">‹</button>' +
-      '<span>' + esc(d.toLocaleDateString('ru-RU', {month:'long', year:'numeric'})) +
+    const d = D(cur), y = d.getFullYear(), m = d.getMonth();
+    const lead = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
+    h = '<div class="nav"><button onclick="shift(-1)">‹</button><span>' +
+      esc(d.toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})) +
       '</span><button onclick="shift(1)">›</button></div><div class="grid">';
-
-    h += ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
-      .map(x => '<div class="weekday">' + x + '</div>')
-      .join('');
-
+    h += ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(x => '<div class="weekday">' + x + '</div>').join('');
     h += '<div></div>'.repeat(lead);
-
     for (let i = 1; i <= n; i++) {
       const s = F(new Date(y, m, i));
-
-      h += '<div class="cell ' +
-        (S.tasks.some(t => t.date === s) ? 'has ' : '') +
-        (s === sel ? 'sel ' : '') +
-        (s === today() ? 'today' : '') +
-        '" onclick="sel=\'' + s + '\';render()">' +
-        i + '</div>';
+      h += '<div class="cell ' + (S.tasks.some(t => t.date === s) ? 'has ' : '') + (s === sel ? 'sel ' : '') +
+        (s === today() ? 'today' : '') + '" onclick="sel=\'' + s + '\';render()">' + i + '</div>';
     }
-
     h += '</div><div class="footer-gap"></div>' + dayBlock(sel);
   }
-
   $('#main').innerHTML = h;
 }
-
-
 
 function shift(n) {
   const d = D(cur);
@@ -206,23 +162,17 @@ const closeM = () => $('#modal').style.display = 'none';
 $('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
 
 function openEdit(id) {
-  const t = S.tasks.find(x => x.id === id) || {
-    date: view === 'month' ? sel : today(),
-    time: '09:00',
-    difficulty: 'medium'
-  };
-
-  const difficulty = t.difficulty || 'medium';
-
+  const t = S.tasks.find(x => x.id === id) || {date: view === 'month' ? sel : today(), time: '09:00', difficulty: 'medium'};
+  const diff = t.difficulty || 'medium';
   modal(
     '<h3>' + (id ? 'Редактировать' : 'Новое задание') + '</h3>' +
     '<input id="f_s" placeholder="Предмет" value="' + esc(t.subject || '') + '">' +
     '<input id="f_d" type="date" value="' + esc(t.date || today()) + '">' +
     '<input id="f_t" type="time" value="' + esc(t.time || '09:00') + '">' +
     '<select id="f_diff">' +
-      '<option value="easy" ' + (difficulty === 'easy' ? 'selected' : '') + '>Легкий</option>' +
-      '<option value="medium" ' + (difficulty === 'medium' ? 'selected' : '') + '>Средний</option>' +
-      '<option value="hard" ' + (difficulty === 'hard' ? 'selected' : '') + '>Тяжелый</option>' +
+      '<option value="easy"' + (diff === 'easy' ? ' selected' : '') + '>Легкий</option>' +
+      '<option value="medium"' + (diff === 'medium' ? ' selected' : '') + '>Средний</option>' +
+      '<option value="hard"' + (diff === 'hard' ? ' selected' : '') + '>Тяжелый</option>' +
     '</select>' +
     '<textarea id="f_x" rows="4" placeholder="Что задано">' + esc(t.description || '') + '</textarea>' +
     '<button class="btn" onclick="save(\'' + esc(id || '') + '\')">Сохранить</button>' +
@@ -230,30 +180,23 @@ function openEdit(id) {
   );
 }
 
-
-
 async function save(id) {
-  const result = await api('save', {
-    task: {
-      id,
-      subject: $('#f_s').value.trim(),
-      date: $('#f_d').value,
-      time: $('#f_t').value,
-      difficulty: $('#f_diff').value,
-      description: $('#f_x').value.trim()
-    }
-  });
-
+  const result = await api('save', {task: {
+    id, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value,
+    difficulty: $('#f_diff').value, description: $('#f_x').value.trim()
+  }});
   if (result) closeM();
 }
 
-function del(id) { tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } }); }
+function del(id) {
+  tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } });
+}
 
+// ---------- Импорт расписания из XLSX / XLS / CSV ----------
 let pendingImport = [];
 
 function openImport() {
   pendingImport = [];
-
   modal(
     '<h3>Загрузить расписание</h3>' +
     '<p class="import-note">Поддерживаются XLSX, XLS и CSV. В первой строке нужны заголовки: <b>Дата, Время, Предмет, Что задано, Сложность</b>.<br><br>' +
@@ -262,139 +205,98 @@ function openImport() {
     '<div id="import_status" class="import-summary">Выбери файл.</div>' +
     '<button class="btn" onclick="runImport()" disabled id="import_btn">Загрузить задания</button>'
   );
-
   $('#import_file').addEventListener('change', onImportFile);
 }
 
 async function onImportFile(event) {
   const file = event.target.files && event.target.files[0];
   pendingImport = [];
-
   if (!file) return;
-
   try {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, {type:'array', cellDates:true});
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
-
+    const wb = XLSX.read(await file.arrayBuffer(), {type: 'array', cellDates: true});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: ''});
     pendingImport = rows.map(normalizeImportRow).filter(Boolean);
-
-    $('#import_status').textContent =
-      'Готово к загрузке: ' + pendingImport.length + ' заданий.';
-    $('#import_btn').disabled = pendingImport.length === 0;
-
+    $('#import_status').textContent = pendingImport.length > 500
+      ? 'Слишком много строк (' + pendingImport.length + '). Максимум — 500.'
+      : 'Готово к загрузке: ' + pendingImport.length + ' заданий.';
+    $('#import_btn').disabled = pendingImport.length === 0 || pendingImport.length > 500;
   } catch (e) {
-    $('#import_status').textContent =
-      'Не удалось прочитать файл: ' + e.message;
+    $('#import_status').textContent = 'Не удалось прочитать файл: ' + e.message;
     $('#import_btn').disabled = true;
   }
 }
 
-function normHeader(value) {
-  return String(value || '').trim().toLowerCase()
-    .replace(/ё/g, 'ё')
-    .replace(/[\s_\-]+/g, ' ');
-}
+const normHeader = v => String(v || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/[\s_\-]+/g, ' ');
 
 function col(row, names) {
-  for (const key of Object.keys(row)) {
-    if (names.includes(normHeader(key))) return row[key];
-  }
+  for (const key of Object.keys(row)) if (names.includes(normHeader(key))) return row[key];
   return '';
 }
 
-function parseImportDate(value) {
-  if (value instanceof Date && !isNaN(value)) {
-    return value.getFullYear() + '-' +
-      String(value.getMonth()+1).padStart(2,'0') + '-' +
-      String(value.getDate()).padStart(2,'0');
+function parseImportDate(v) {
+  if (v instanceof Date && !isNaN(v)) {
+    const d = new Date(v.getTime() + 12 * 3600 * 1000); // защита от сдвига на секунды/часы
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
-
-  const text = String(value || '').trim();
+  if (typeof v === 'number' && v > 1) {
+    const c = XLSX.SSF.parse_date_code(v);
+    return c ? c.y + '-' + pad(c.m) + '-' + pad(c.d) : '';
+  }
+  const text = String(v || '').trim();
   let m = text.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
-
-  if (m) {
-    return m[3] + '-' +
-      m[2].padStart(2,'0') + '-' +
-      m[1].padStart(2,'0');
-  }
-
+  if (m) return m[3] + '-' + pad(m[2]) + '-' + pad(m[1]);
   m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-
-  return m
-    ? m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0')
-    : '';
+  return m ? m[1] + '-' + pad(m[2]) + '-' + pad(m[3]) : '';
 }
 
-function parseImportTime(value) {
-  if (value instanceof Date && !isNaN(value)) {
-    return String(value.getHours()).padStart(2,'0') + ':' +
-      String(value.getMinutes()).padStart(2,'0');
-  }
-
-  if (typeof value === 'number' && value >= 0 && value < 1) {
-    const total = Math.round(value * 24 * 60);
-    return String(Math.floor(total/60) % 24).padStart(2,'0') + ':' +
-      String(total % 60).padStart(2,'0');
-  }
-
-  const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})/);
-
-  return m ? m[1].padStart(2,'0') + ':' + m[2] : '';
+function parseImportTime(v) {
+  let total = null;
+  if (v instanceof Date && !isNaN(v)) total = Math.round((v.getHours() * 3600 + v.getMinutes() * 60 + v.getSeconds()) / 60);
+  else if (typeof v === 'number' && v >= 0 && v < 1) total = Math.round(v * 24 * 60);
+  if (total !== null) return pad(Math.floor(total / 60) % 24) + ':' + pad(total % 60);
+  const m = String(v || '').trim().match(/^(\d{1,2}):(\d{2})/);
+  return m ? pad(m[1]) + ':' + m[2] : '';
 }
 
-function parseImportDifficulty(value) {
-  const v = normHeader(value);
-
-  if (v === 'easy' || v === 'легкий' || v === '1') return 'easy';
-  if (v === 'hard' || v === 'тяжелый' || v === 'трудный' || v === '3') return 'hard';
-
+function parseImportDifficulty(v) {
+  const x = normHeader(v);
+  if (['easy', 'легкий', '1'].includes(x)) return 'easy';
+  if (['hard', 'тяжелый', 'трудный', '3'].includes(x)) return 'hard';
   return 'medium';
 }
 
 function normalizeImportRow(row) {
-  const date = parseImportDate(col(row, ['дата','date']));
-  const time = parseImportTime(col(row, ['время','time']));
-  const subject = String(col(row, ['предмет','дисциплина','subject']) || '').trim();
-  const description = String(col(row, ['что задано','задание','домашнее задание','описание','description']) || '').trim();
-  const difficulty = parseImportDifficulty(col(row, ['сложность','difficulty','уровень']));
-
+  const date = parseImportDate(col(row, ['дата', 'date']));
+  const time = parseImportTime(col(row, ['время', 'time']));
+  const subject = String(col(row, ['предмет', 'дисциплина', 'subject']) || '').trim();
+  const description = String(col(row, ['что задано', 'задание', 'домашнее задание', 'описание', 'description']) || '').trim();
+  const difficulty = parseImportDifficulty(col(row, ['сложность', 'difficulty', 'уровень']));
   if (!date || !time || !subject) return null;
-
   return {date, time, subject, description, difficulty};
 }
 
 async function runImport() {
   if (!pendingImport.length) return;
-
-  const button = $('#import_btn');
-  button.disabled = true;
-  button.textContent = 'Загрузка...';
-
+  const btn = $('#import_btn');
+  btn.disabled = true; btn.textContent = 'Загрузка...';
   const result = await api('importTasks', {tasks: pendingImport});
-
-  if (result) {
-    closeM();
-  } else {
-    button.disabled = false;
-    button.textContent = 'Загрузить задания';
-  }
+  if (result) closeM(); else { btn.disabled = false; btn.textContent = 'Загрузить задания'; }
 }
 
+// ---------- Напоминания ----------
 const OPTS = [[1440, 'за 1 день'], [180, 'за 3 часа'], [60, 'за 1 час'], [30, 'за 30 минут'], [10, 'за 10 минут']];
+
 $('#bell').onclick = () => {
-  modal(`<h3>Когда напоминать о заданиях</h3><div>${OPTS.map(([m, l]) =>
-    `<button class="chip ${S.rem.includes(m) ? 'on' : ''}" onclick="tgl(${m},this)">${l}</button>`).join('')}</div>
-    <p class="hint">Ничего не выбрано — напоминаний не будет. Время — МСК.</p>
-    <button class="btn" onclick="saveReminders()">Сохранить</button>`);
+  modal('<h3>Когда напоминать о заданиях</h3><div>' + OPTS.map(([m, l]) =>
+    '<button class="chip ' + (S.rem.includes(m) ? 'on' : '') + '" onclick="tgl(' + m + ',this)">' + l + '</button>').join('') +
+    '</div><p class="hint">Ничего не выбрано — напоминаний не будет. Время — МСК.</p>' +
+    '<button class="btn" onclick="saveReminders()">Сохранить</button>');
 };
 
 async function saveReminders() {
   const result = await api('setReminders', {rem: S.rem});
   if (result) closeM();
 }
-
 
 function tgl(m, el) {
   S.rem = S.rem.includes(m) ? S.rem.filter(x => x !== m) : [...S.rem, m].sort((a, b) => b - a);
