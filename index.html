@@ -1,68 +1,143 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мое расписание</title>
-    <!-- Подключение библиотеки Telegram Mini Apps -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        /* Использование нативных цветов темы Telegram */
-        body {
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            font-family: sans-serif;
-            padding: 20px;
-            margin: 0;
-        }
-        h1 {
-            color: var(--tg-theme-text-color);
-        }
-        .task-card {
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-        button {
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            width: 100%;
-            font-size: 16px;
-            margin-top: 15px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Расписание</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;font-family:-apple-system,Roboto,sans-serif;background:var(--tg-theme-bg-color,#fff);color:var(--tg-theme-text-color,#000)}
+.bar{display:flex;gap:6px;margin-bottom:10px}
+.tab,.btn,.chip{border:0;border-radius:10px;padding:9px 12px;font-size:15px;background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
+.tab{flex:1}
+.on{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
+.btn{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff);width:100%;margin-top:8px}
+.btn.red{background:#e53935}
+.nav{display:flex;justify-content:space-between;align-items:center;margin:6px 0;font-weight:600}
+.nav button{border:0;background:none;font-size:22px;color:var(--tg-theme-link-color,#3390ec)}
+h3{margin:14px 0 6px;font-size:15px;color:var(--tg-theme-hint-color,#888)}
+.card{background:var(--tg-theme-secondary-bg-color,#f0f0f0);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.card p{margin:4px 0;white-space:pre-wrap}
+small,.hint{color:var(--tg-theme-hint-color,#888)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cell{padding:8px 0;border-radius:8px;font-size:14px;position:relative}
+.cell.has::after{content:'';position:absolute;bottom:2px;left:50%;width:5px;height:5px;margin-left:-2px;border-radius:50%;background:var(--tg-theme-button-color,#3390ec)}
+.cell.sel{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
+.cell.today{font-weight:700;text-decoration:underline}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:flex-end;z-index:9}
+#box{background:var(--tg-theme-bg-color,#fff);width:100%;max-height:90%;overflow:auto;border-radius:16px 16px 0 0;padding:16px}
+input,textarea{width:100%;padding:10px;margin:4px 0 8px;border-radius:8px;border:1px solid var(--tg-theme-hint-color,#ccc);background:var(--tg-theme-secondary-bg-color,#fff);color:var(--tg-theme-text-color,#000);font-size:16px;font-family:inherit}
+.chip{display:inline-block;margin:0 6px 6px 0}
+#err{color:#e53935;margin:6px 0}
+</style>
 </head>
 <body>
+<div class="bar">
+  <button class="tab" data-v="list">Список</button>
+  <button class="tab" data-v="week">Неделя</button>
+  <button class="tab" data-v="month">Месяц</button>
+  <button class="tab" id="bell">🔔</button>
+</div>
+<div id="err"></div>
+<div id="main">Загрузка...</div>
+<button class="btn" onclick="openEdit()">+ Добавить задание</button>
+<div id="modal"><div id="box"></div></div>
 
-    <h1>Мои задания</h1>
-    <p id="userGreeting">Загрузка...</p>
+<script>
+// === ВСТАВЬ СЮДА URL веб-приложения Apps Script (заканчивается на /exec) ===
+const API = 'ВСТАВЬ_URL_APPS_SCRIPT';
 
-    <div class="task-card">
-        <h3>Стратегическое планирование</h3>
-        <p>Написать эссе: "Зачем компании стратегическое управление..."</p>
-        <small>Дедлайн: 15 октября</small>
-    </div>
+const tg = Telegram.WebApp; tg.expand();
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today = () => new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Moscow'});
+const D = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const F = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const addD = (s, n) => { const d = D(s); d.setDate(d.getDate() + n); return F(d); };
+const fmt = s => D(s).toLocaleDateString('ru-RU', {weekday: 'short', day: 'numeric', month: 'long'});
 
-    <button onclick="tg.close()">Закрыть приложение</button>
+let S = {tasks: [], rem: [1440, 60]}, view = 'list', cur = today(), sel = today();
 
-    <script>
-        // Инициализация объекта Telegram Web App
-        const tg = window.Telegram.WebApp;
-        
-        // Разворачиваем приложение на всю высоту экрана
-        tg.expand();
+async function api(action, data = {}) {
+  $('#err').textContent = '';
+  try {
+    const r = await fetch(API, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action, initData: tg.initData, ...data})});
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    S = j; render();
+  } catch (e) { $('#err').textContent = 'Ошибка: ' + e.message; $('#main').textContent = ''; }
+}
 
-        // Проверяем, доступны ли данные пользователя
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            const user = tg.initDataUnsafe.user;
-            document.getElementById('userGreeting').innerText = `Привет, ${user.first_name}!`;
-        } else {
-            document.getElementById('userGreeting').innerText = 'Вы зашли не через Telegram.';
-        }
-    </script>
+const card = t => `<div class="card" onclick="openEdit('${t.id}')"><b>${esc(t.subject)}</b> <small>${t.time}</small>
+  <p>${esc(t.description)}</p><small>— ${esc(t.author)}</small></div>`;
+const day = d => { const l = S.tasks.filter(t => t.date === d); return l.length ? l.map(card).join('') : '<small>Пусто</small>'; };
+
+function render() {
+  document.querySelectorAll('.tab[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  let h = '';
+  if (view === 'list') {
+    const up = S.tasks.filter(t => t.date >= today());
+    const dates = [...new Set(up.map(t => t.date))];
+    h = dates.length ? dates.map(d => `<h3>${fmt(d)}</h3>` + up.filter(t => t.date === d).map(card).join('')).join('') : '<p class="hint">Заданий пока нет</p>';
+  } else if (view === 'week') {
+    const st = addD(cur, -((D(cur).getDay() + 6) % 7));
+    h = `<div class="nav"><button onclick="shift(-1)">‹</button><span>${fmt(st)} – ${fmt(addD(st, 6))}</span><button onclick="shift(1)">›</button></div>`;
+    for (let i = 0; i < 7; i++) h += `<h3>${fmt(addD(st, i))}</h3>` + day(addD(st, i));
+  } else {
+    const d = D(cur), y = d.getFullYear(), m = d.getMonth(), lead = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
+    h = `<div class="nav"><button onclick="shift(-1)">‹</button><span>${d.toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}</span><button onclick="shift(1)">›</button></div><div class="grid">`;
+    h += ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(x => `<small>${x}</small>`).join('') + '<div></div>'.repeat(lead);
+    for (let i = 1; i <= n; i++) {
+      const s = F(new Date(y, m, i));
+      h += `<div class="cell ${S.tasks.some(t => t.date === s) ? 'has' : ''} ${s === sel ? 'sel' : ''} ${s === today() ? 'today' : ''}" onclick="sel='${s}';render()">${i}</div>`;
+    }
+    h += `</div><h3>${fmt(sel)}</h3>` + day(sel);
+  }
+  $('#main').innerHTML = h;
+}
+
+function shift(n) {
+  const d = D(cur);
+  if (view === 'week') cur = addD(cur, 7 * n); else { d.setMonth(d.getMonth() + n, 1); cur = F(d); }
+  render();
+}
+
+const modal = html => { $('#box').innerHTML = html; $('#modal').style.display = 'flex'; };
+const closeM = () => $('#modal').style.display = 'none';
+$('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
+
+function openEdit(id) {
+  const t = S.tasks.find(x => x.id === id) || {date: view === 'month' ? sel : today(), time: '09:00'};
+  modal(`<h3>${id ? 'Редактировать' : 'Новое задание'}</h3>
+    <input id="f_s" placeholder="Предмет" value="${esc(t.subject)}">
+    <input id="f_d" type="date" value="${t.date}"><input id="f_t" type="time" value="${t.time}">
+    <textarea id="f_x" rows="4" placeholder="Что задано">${esc(t.description)}</textarea>
+    <button class="btn" onclick="save('${id || ''}')">Сохранить</button>
+    ${id ? `<button class="btn red" onclick="del('${id}')">Удалить</button>` : ''}`);
+}
+
+function save(id) {
+  api('save', {task: {id, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value, description: $('#f_x').value.trim()}});
+  closeM();
+}
+function del(id) { tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } }); }
+
+const OPTS = [[1440, 'за 1 день'], [180, 'за 3 часа'], [60, 'за 1 час'], [30, 'за 30 минут'], [10, 'за 10 минут']];
+$('#bell').onclick = () => {
+  modal(`<h3>Когда напоминать о заданиях</h3><div>${OPTS.map(([m, l]) =>
+    `<button class="chip ${S.rem.includes(m) ? 'on' : ''}" onclick="tgl(${m},this)">${l}</button>`).join('')}</div>
+    <p class="hint">Ничего не выбрано — напоминаний не будет. Время — МСК.</p>
+    <button class="btn" onclick="api('setReminders',{rem:S.rem});closeM()">Сохранить</button>`);
+};
+function tgl(m, el) {
+  S.rem = S.rem.includes(m) ? S.rem.filter(x => x !== m) : [...S.rem, m].sort((a, b) => b - a);
+  el.classList.toggle('on');
+}
+
+document.querySelectorAll('.tab[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; cur = today(); render(); });
+api('list');
+</script>
 </body>
 </html>
