@@ -5,27 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Расписание</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
+/* Цвета меняются здесь */
+:root{--accent:#785a46;--bg:#e2c499;--surface:#ffffff;--soft:#f6efe2;--ink:#000000;--muted:#6b5a3e}
 *{box-sizing:border-box}
-body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--tg-theme-bg-color,#fff);color:var(--tg-theme-text-color,#000);font-size:17px}
+body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:17px}
 .bar{display:flex;gap:8px;margin-bottom:12px}
-.tab,.btn,.chip{border:0;border-radius:11px;padding:11px 14px;font-size:16px;background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
+.tab,.btn,.chip{border:0;border-radius:11px;padding:11px 14px;font-size:16px;background:var(--surface);color:var(--ink)}
 .tab{flex:1}
-.on{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
-.btn{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff);width:100%;margin-top:9px}
-.btn.secondary{background:var(--tg-theme-secondary-bg-color,#eee);color:var(--tg-theme-text-color,#000)}
+.on{background:var(--accent);color:#fff}
+.btn{background:var(--accent);color:#fff;width:100%;margin-top:9px}
 .btn.red{background:#e53935;color:#fff}
-.btn:disabled{opacity:.5}
 .nav{display:flex;justify-content:space-between;align-items:center;margin:8px 0 11px;font-weight:700;font-size:17px}
-.nav button{border:0;background:none;font-size:26px;color:var(--tg-theme-link-color,#3390ec);padding:0 8px}
-h3{margin:0 0 7px;font-size:16px;color:var(--tg-theme-hint-color,#777)}
-.day-block{background:#e2c499;border-radius:13px;padding:11px 12px;margin-bottom:10px;color:#000}
-.card{background:#e2c499;border-radius:11px;padding:12px 13px;margin-bottom:9px;color:#000}
-.day-block .card{background:#ecd5b0}
+.nav button{border:0;background:none;font-size:26px;color:var(--accent);padding:0 8px}
+h3{margin:0 0 7px;font-size:16px;color:var(--muted)}
+small,.hint{color:var(--muted);font-size:14px}
+.day-block{background:var(--surface);border-radius:13px;padding:11px 12px;margin-bottom:10px}
+.day-block.click{cursor:pointer}
+.card{background:var(--surface);border-radius:11px;padding:12px 13px;margin-bottom:9px}
+.day-block .card{background:var(--soft)}
 .card p{margin:6px 0;white-space:pre-wrap;font-size:15.5px;line-height:1.35}
-small,.hint{color:var(--tg-theme-hint-color,#777);font-size:14px}
-.day-block small,.card small{color:#6b5a3e}
+.mini{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:15.5px}
 .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .edit{margin-left:auto;font-size:18px;padding:2px 6px;cursor:pointer}
 .difficulty{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
@@ -33,19 +33,17 @@ small,.hint{color:var(--tg-theme-hint-color,#777);font-size:14px}
 .difficulty.medium{background:#e1b16a}
 .difficulty.hard{background:#ce5a57}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
-.cell{padding:10px 0;border-radius:9px;font-size:15px;position:relative;background:#e2c499;min-height:39px;color:#000}
-.cell.has::after{content:'';position:absolute;bottom:3px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#555}
-.cell.sel{background:var(--tg-theme-button-color,#3390ec);color:var(--tg-theme-button-text-color,#fff)}
+.cell{padding:10px 0;border-radius:9px;font-size:15px;position:relative;background:var(--surface);min-height:39px}
+.cell.has::after{content:'';position:absolute;bottom:3px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--accent)}
+.cell.sel{background:var(--accent);color:#fff}
+.cell.sel.has::after{background:#fff}
 .cell.today{font-weight:800;text-decoration:underline}
-.weekday{padding:5px 0;font-size:13px;color:var(--tg-theme-hint-color,#777)}
+.weekday{padding:5px 0;font-size:13px;color:var(--muted)}
 #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:flex-end;z-index:9}
-#box{background:var(--tg-theme-bg-color,#fff);width:100%;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;padding:18px}
-input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px;border:1px solid var(--tg-theme-hint-color,#bbb);background:var(--tg-theme-secondary-bg-color,#fff);color:var(--tg-theme-text-color,#000);font-size:17px;font-family:inherit}
+#box{background:var(--bg);width:100%;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;padding:18px}
+input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px;border:1px solid #b89b6a;background:#fff;color:#000;font-size:17px;font-family:inherit}
 .chip{display:inline-block;margin:0 7px 7px 0;cursor:pointer}
-#err{color:#e53935;margin:7px 0;line-height:1.35}
-.import-note{font-size:14px;line-height:1.4;color:var(--tg-theme-hint-color,#777)}
-.import-summary{margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--tg-theme-secondary-bg-color,#eee)}
-.footer-gap{height:4px}
+#err{color:#c62828;margin:7px 0;line-height:1.35}
 </style>
 </head>
 <body>
@@ -58,7 +56,6 @@ input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px
 <div id="err"></div>
 <div id="main">Загрузка...</div>
 <button class="btn" onclick="openEdit()">+ Добавить задание</button>
-<button class="btn secondary" onclick="openImport()">📥 Загрузить расписание</button>
 <div id="modal"><div id="box"></div></div>
 
 <script>
@@ -92,17 +89,17 @@ async function api(action, data = {}) {
     return j;
   } catch (e) {
     $('#err').textContent = 'Ошибка: ' + e.message;
-    $('#main').textContent = S.tasks.length ? '' : $('#main').textContent === 'Загрузка...' ? '' : $('#main').textContent;
+    if (!S.tasks.length) $('#main').textContent = '';
     return null;
   }
 }
 
 const difficultyLabel = v => v === 'easy' ? 'Легкий' : v === 'hard' ? 'Тяжелый' : 'Средний';
+const dayTasks = d => S.tasks.filter(t => t.date === d).sort((x, y) => (x.time || '').localeCompare(y.time || ''));
 
-// Карточка задания: нажатие на неё ИЛИ на ✏️ открывает редактирование
+// Полная карточка: нажатие на неё или на ✏️ открывает редактирование
 function card(t) {
-  const diff = t.difficulty || 'medium';
-  const id = esc(t.id);
+  const diff = t.difficulty || 'medium', id = esc(t.id);
   return '<div class="card" onclick="openEdit(\'' + id + '\')">' +
     '<div class="meta"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' +
     '<span class="difficulty ' + diff + '">' + difficultyLabel(diff) + '</span>' +
@@ -111,27 +108,35 @@ function card(t) {
     '<small>— ' + esc(t.author || 'Пользователь') + '</small></div>';
 }
 
-function day(d) {
-  const list = S.tasks.filter(t => t.date === d).sort((x, y) => (x.time || '').localeCompare(y.time || ''));
-  return list.length ? list.map(card).join('') : '<small>Пусто</small>';
+const day = d => { const l = dayTasks(d); return l.length ? l.map(card).join('') : '<small>Пусто</small>'; };
+const dayBlock = d => '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' + day(d) + '</section>';
+
+// Неделя: краткий список заданий дня, по нажатию открывается окно дня
+function weekBlock(d) {
+  const l = dayTasks(d);
+  return '<section class="day-block click" onclick="openDay(\'' + d + '\')"><h3>' + esc(fmt(d)) + '</h3>' +
+    (l.length ? l.map(t => '<div class="mini"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small></div>').join('')
+              : '<small>Пусто</small>') + '</section>';
 }
 
-const dayBlock = d => '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' + day(d) + '</section>';
+function openDay(d) {
+  sel = d;
+  modal('<h3>' + esc(fmt(d)) + '</h3>' + day(d) + '<button class="btn" onclick="openEdit()">+ Добавить на этот день</button>');
+}
 
 function render() {
   document.querySelectorAll('.tab[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view));
   let h = '';
 
   if (view === 'list') {
-    const up = S.tasks.filter(t => t.date >= today());
-    const dates = [...new Set(up.map(t => t.date))].sort();
+    const dates = [...new Set(S.tasks.filter(t => t.date >= today()).map(t => t.date))].sort();
     h = dates.length ? dates.map(dayBlock).join('') : '<p class="hint">Заданий пока нет</p>';
 
   } else if (view === 'week') {
     const st = addD(cur, -((D(cur).getDay() + 6) % 7));
     h = '<div class="nav"><button onclick="shift(-1)">‹</button><span>' + esc(fmt(st)) + ' – ' + esc(fmt(addD(st, 6))) +
       '</span><button onclick="shift(1)">›</button></div>';
-    for (let i = 0; i < 7; i++) h += dayBlock(addD(st, i));
+    for (let i = 0; i < 7; i++) h += weekBlock(addD(st, i));
 
   } else {
     const d = D(cur), y = d.getFullYear(), m = d.getMonth();
@@ -146,7 +151,7 @@ function render() {
       h += '<div class="cell ' + (S.tasks.some(t => t.date === s) ? 'has ' : '') + (s === sel ? 'sel ' : '') +
         (s === today() ? 'today' : '') + '" onclick="sel=\'' + s + '\';render()">' + i + '</div>';
     }
-    h += '</div><div class="footer-gap"></div>' + dayBlock(sel);
+    h += '</div><div style="height:10px"></div>' + dayBlock(sel);
   }
   $('#main').innerHTML = h;
 }
@@ -162,7 +167,7 @@ const closeM = () => $('#modal').style.display = 'none';
 $('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
 
 function openEdit(id) {
-  const t = S.tasks.find(x => x.id === id) || {date: view === 'month' ? sel : today(), time: '09:00', difficulty: 'medium'};
+  const t = S.tasks.find(x => x.id === id) || {date: sel, time: '09:00', difficulty: 'medium'};
   const diff = t.difficulty || 'medium';
   modal(
     '<h3>' + (id ? 'Редактировать' : 'Новое задание') + '</h3>' +
@@ -192,97 +197,6 @@ function del(id) {
   tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } });
 }
 
-// ---------- Импорт расписания из XLSX / XLS / CSV ----------
-let pendingImport = [];
-
-function openImport() {
-  pendingImport = [];
-  modal(
-    '<h3>Загрузить расписание</h3>' +
-    '<p class="import-note">Поддерживаются XLSX, XLS и CSV. В первой строке нужны заголовки: <b>Дата, Время, Предмет, Что задано, Сложность</b>.<br><br>' +
-    'Пример: <b>28.09.2026 | 15:30 | Математика | Решить №1–5 | Средний</b>.</p>' +
-    '<input id="import_file" type="file" accept=".xlsx,.xls,.csv">' +
-    '<div id="import_status" class="import-summary">Выбери файл.</div>' +
-    '<button class="btn" onclick="runImport()" disabled id="import_btn">Загрузить задания</button>'
-  );
-  $('#import_file').addEventListener('change', onImportFile);
-}
-
-async function onImportFile(event) {
-  const file = event.target.files && event.target.files[0];
-  pendingImport = [];
-  if (!file) return;
-  try {
-    const wb = XLSX.read(await file.arrayBuffer(), {type: 'array', cellDates: true});
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: ''});
-    pendingImport = rows.map(normalizeImportRow).filter(Boolean);
-    $('#import_status').textContent = pendingImport.length > 500
-      ? 'Слишком много строк (' + pendingImport.length + '). Максимум — 500.'
-      : 'Готово к загрузке: ' + pendingImport.length + ' заданий.';
-    $('#import_btn').disabled = pendingImport.length === 0 || pendingImport.length > 500;
-  } catch (e) {
-    $('#import_status').textContent = 'Не удалось прочитать файл: ' + e.message;
-    $('#import_btn').disabled = true;
-  }
-}
-
-const normHeader = v => String(v || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/[\s_\-]+/g, ' ');
-
-function col(row, names) {
-  for (const key of Object.keys(row)) if (names.includes(normHeader(key))) return row[key];
-  return '';
-}
-
-function parseImportDate(v) {
-  if (v instanceof Date && !isNaN(v)) {
-    const d = new Date(v.getTime() + 12 * 3600 * 1000); // защита от сдвига на секунды/часы
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
-  if (typeof v === 'number' && v > 1) {
-    const c = XLSX.SSF.parse_date_code(v);
-    return c ? c.y + '-' + pad(c.m) + '-' + pad(c.d) : '';
-  }
-  const text = String(v || '').trim();
-  let m = text.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
-  if (m) return m[3] + '-' + pad(m[2]) + '-' + pad(m[1]);
-  m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  return m ? m[1] + '-' + pad(m[2]) + '-' + pad(m[3]) : '';
-}
-
-function parseImportTime(v) {
-  let total = null;
-  if (v instanceof Date && !isNaN(v)) total = Math.round((v.getHours() * 3600 + v.getMinutes() * 60 + v.getSeconds()) / 60);
-  else if (typeof v === 'number' && v >= 0 && v < 1) total = Math.round(v * 24 * 60);
-  if (total !== null) return pad(Math.floor(total / 60) % 24) + ':' + pad(total % 60);
-  const m = String(v || '').trim().match(/^(\d{1,2}):(\d{2})/);
-  return m ? pad(m[1]) + ':' + m[2] : '';
-}
-
-function parseImportDifficulty(v) {
-  const x = normHeader(v);
-  if (['easy', 'легкий', '1'].includes(x)) return 'easy';
-  if (['hard', 'тяжелый', 'трудный', '3'].includes(x)) return 'hard';
-  return 'medium';
-}
-
-function normalizeImportRow(row) {
-  const date = parseImportDate(col(row, ['дата', 'date']));
-  const time = parseImportTime(col(row, ['время', 'time']));
-  const subject = String(col(row, ['предмет', 'дисциплина', 'subject']) || '').trim();
-  const description = String(col(row, ['что задано', 'задание', 'домашнее задание', 'описание', 'description']) || '').trim();
-  const difficulty = parseImportDifficulty(col(row, ['сложность', 'difficulty', 'уровень']));
-  if (!date || !time || !subject) return null;
-  return {date, time, subject, description, difficulty};
-}
-
-async function runImport() {
-  if (!pendingImport.length) return;
-  const btn = $('#import_btn');
-  btn.disabled = true; btn.textContent = 'Загрузка...';
-  const result = await api('importTasks', {tasks: pendingImport});
-  if (result) closeM(); else { btn.disabled = false; btn.textContent = 'Загрузить задания'; }
-}
-
 // ---------- Напоминания ----------
 const OPTS = [[1440, 'за 1 день'], [180, 'за 3 часа'], [60, 'за 1 час'], [30, 'за 30 минут'], [10, 'за 10 минут']];
 
@@ -303,7 +217,7 @@ function tgl(m, el) {
   el.classList.toggle('on');
 }
 
-document.querySelectorAll('.tab[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; cur = today(); render(); });
+document.querySelectorAll('.tab[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; cur = today(); sel = today(); render(); });
 api('list');
 </script>
 </body>
