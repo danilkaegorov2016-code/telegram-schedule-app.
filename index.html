@@ -9,7 +9,7 @@
 /* Цвета меняются здесь */
 :root{--accent:#785a46;--bg:#e2c499;--surface:#ffffff;--soft:#f6efe2;--ink:#000000;--muted:#6b5a3e}
 *{box-sizing:border-box}
-body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:17px}
+body{margin:0;padding:14px 14px 96px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:17px}
 .bar{display:flex;gap:8px;margin-bottom:12px}
 .tab,.btn,.chip{border:0;border-radius:11px;padding:11px 14px;font-size:16px;background:var(--surface);color:var(--ink)}
 .tab{flex:1}
@@ -25,7 +25,7 @@ small,.hint{color:var(--muted);font-size:14px}
 .card{background:var(--surface);border-radius:11px;padding:12px 13px;margin-bottom:9px}
 .day-block .card{background:var(--soft)}
 .card p{margin:6px 0;white-space:pre-wrap;font-size:15.5px;line-height:1.35}
-.mini{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:15.5px}
+.mini{display:flex;gap:8px;align-items:center;padding:3px 0;font-size:15.5px}
 .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .edit{margin-left:auto;font-size:18px;padding:2px 6px;cursor:pointer}
 .difficulty{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
@@ -33,10 +33,18 @@ small,.hint{color:var(--muted);font-size:14px}
 .difficulty.medium{background:#e1b16a}
 .difficulty.hard{background:#ce5a57}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
-.cell{padding:10px 0;border-radius:9px;font-size:15px;position:relative;background:var(--surface);min-height:39px}
-.cell.has::after{content:'';position:absolute;bottom:3px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--accent)}
+.cell{padding:8px 0 6px;border-radius:9px;font-size:15px;background:var(--surface);min-height:52px}
 .cell.sel{background:var(--accent);color:#fff}
-.cell.sel.has::after{background:#fff}
+.dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:4px;min-height:8px;padding:0 2px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.dot.sm{width:8px;height:8px}
+.dot.easy{background:#78a5a3}
+.dot.medium{background:#e1b16a}
+.dot.hard{background:#ce5a57}
+.dot.none{background:#fff;border:2px solid var(--accent)}
+.dot.blank{background:transparent}
+.cell.sel .dot{box-shadow:0 0 0 1.5px #fff}
+.cell.sel .dot.none{background:transparent;border-color:#fff}
 .cell.today{font-weight:800;text-decoration:underline}
 .weekday{padding:5px 0;font-size:13px;color:var(--muted)}
 #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:flex-end;z-index:9}
@@ -44,6 +52,21 @@ small,.hint{color:var(--muted);font-size:14px}
 input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px;border:1px solid #b89b6a;background:#fff;color:#000;font-size:17px;font-family:inherit}
 .chip{display:inline-block;margin:0 7px 7px 0;cursor:pointer}
 #err{color:#c62828;margin:7px 0;line-height:1.35}
+#searchBar{display:none}
+#searchBar input{margin:0 0 12px}
+.chk{display:flex;align-items:center;margin:4px 0 10px;font-size:17px}
+.chk input{width:22px;height:22px;margin:0 10px 0 0;padding:0;flex:none}
+#bottom{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);box-shadow:0 -6px 12px -6px rgba(0,0,0,.18)}
+#bottom .btn{margin:0;width:auto;flex:1}
+#bottom .tab{flex:1}
+.item{display:flex;gap:12px;align-items:center;cursor:pointer}
+.th{width:52px;height:52px;object-fit:cover;border-radius:8px;flex:none}
+.ic{width:52px;font-size:30px;text-align:center;flex:none}
+.pdf{width:100%;height:66vh;border:0;border-radius:10px;background:#fff}
+.ph{width:100%;border-radius:10px}
+audio{width:100%;margin:6px 0}
+.prog{height:8px;background:#fff;border-radius:6px;overflow:hidden;margin:8px 0}
+#u_bar{height:100%;width:0;background:var(--accent);transition:width .2s}
 </style>
 </head>
 <body>
@@ -54,8 +77,12 @@ input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px
   <button class="tab" id="bell">🔔</button>
 </div>
 <div id="err"></div>
+<div id="searchBar"><input id="q" type="search" autocomplete="off" placeholder="🔍 Поиск: предмет, преподаватель, аудитория, дата" oninput="render()"></div>
 <div id="main">Загрузка...</div>
-<button class="btn" onclick="openEdit()">+ Добавить задание</button>
+<div id="bottom">
+  <button class="btn" id="addBtn" onclick="openEdit()">+ Добавить</button>
+  <button class="tab" id="libBtn" onclick="openLib()">📚 Учебники</button>
+</div>
 <div id="modal"><div id="box"></div></div>
 
 <script>
@@ -72,9 +99,9 @@ const F = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDa
 const addD = (s, n) => { const d = D(s); d.setDate(d.getDate() + n); return F(d); };
 const fmt = s => D(s).toLocaleDateString('ru-RU', {weekday: 'short', day: 'numeric', month: 'long'});
 
-let S = {tasks: [], rem: [1440, 60]}, view = 'list', cur = today(), sel = today();
+let S = {tasks: [], rem: [1440, 60], files: []}, view = 'list', cur = today(), sel = today();
 
-async function api(action, data = {}) {
+async function api(action, data = {}, raw = false) {
   $('#err').textContent = '';
   try {
     if (!tg.initData) throw new Error('Telegram initData не получен. Откройте приложение из Telegram.');
@@ -85,6 +112,7 @@ async function api(action, data = {}) {
     });
     const j = await r.json();
     if (j.error) throw new Error(j.error);
+    if (raw) return j;
     S = j; render();
     return j;
   } catch (e) {
@@ -94,15 +122,18 @@ async function api(action, data = {}) {
   }
 }
 
-const difficultyLabel = v => v === 'easy' ? 'Легкий' : v === 'hard' ? 'Тяжелый' : 'Средний';
+const difficultyLabel = v => v === 'easy' ? 'Легкий' : v === 'hard' ? 'Тяжелый' : v === 'medium' ? 'Средний' : '';
+const isHw = t => t.hw === '1';
+const norm = s => String(s || '').toLowerCase().replace(/ё/g, 'е');
 const dayTasks = d => S.tasks.filter(t => t.date === d).sort((x, y) => (x.time || '').localeCompare(y.time || ''));
 
 // Полная карточка: нажатие на неё или на ✏️ открывает редактирование
 function card(t) {
-  const diff = t.difficulty || 'medium', id = esc(t.id);
+  const diff = difficultyLabel(t.difficulty) ? t.difficulty : '', id = esc(t.id);
   return '<div class="card" onclick="openEdit(\'' + id + '\')">' +
     '<div class="meta"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' +
-    '<span class="difficulty ' + diff + '">' + difficultyLabel(diff) + '</span>' +
+    (isHw(t) ? '<span title="Домашнее задание">📝</span>' : '') +
+    (diff ? '<span class="difficulty ' + diff + '">' + difficultyLabel(diff) + '</span>' : '') +
     '<span class="edit" onclick="event.stopPropagation();openEdit(\'' + id + '\')">✏️</span></div>' +
     (t.description ? '<p>' + esc(t.description) + '</p>' : '') +
     '<small>— ' + esc(t.author || 'Пользователь') + '</small></div>';
@@ -115,8 +146,28 @@ const dayBlock = d => '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' 
 function weekBlock(d) {
   const l = dayTasks(d);
   return '<section class="day-block click" onclick="openDay(\'' + d + '\')"><h3>' + esc(fmt(d)) + '</h3>' +
-    (l.length ? l.map(t => '<div class="mini"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small></div>').join('')
+    (l.length ? l.map(t => '<div class="mini"><span class="dot ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'blank') + '"></span><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' + (isHw(t) ? '<span>📝</span>' : '') + '</div>').join('')
               : '<small>Пусто</small>') + '</section>';
+}
+
+// Поиск по всем заданиям (в том числе прошедшим): слова через пробел, все должны найтись
+function searchTasks(q) {
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  return S.tasks.filter(t => {
+    const [y, m, d] = String(t.date).split('-');
+    const hay = norm([t.subject, t.description, t.author, fmt(t.date), t.date, d + '.' + m + '.' + y, d + '.' + m].join(' '));
+    return words.every(w => hay.includes(w));
+  }).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+}
+
+function searchHtml(res) {
+  if (!res.length) return '<p class="hint">Ничего не найдено</p>';
+  const shown = res.slice(0, 200);
+  const dates = [...new Set(shown.map(t => t.date))];
+  return '<p class="hint">Найдено: ' + res.length + (res.length > 200 ? ' (показаны первые 200)' : '') + '</p>' +
+    dates.map(d => '<section class="day-block"><h3>' + esc(fmt(d)) + (d < today() ? ' · прошло' : '') + '</h3>' +
+      shown.filter(t => t.date === d).map(card).join('') + '</section>').join('');
 }
 
 function openDay(d) {
@@ -126,11 +177,22 @@ function openDay(d) {
 
 function render() {
   document.querySelectorAll('.tab[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  $('#libBtn').classList.toggle('on', view === 'lib');
+  $('#addBtn').style.display = view === 'lib' ? 'none' : '';
+  $('#searchBar').style.display = view === 'list' ? 'block' : 'none';
   let h = '';
 
-  if (view === 'list') {
-    const dates = [...new Set(S.tasks.filter(t => t.date >= today()).map(t => t.date))].sort();
-    h = dates.length ? dates.map(dayBlock).join('') : '<p class="hint">Заданий пока нет</p>';
+  if (view === 'lib') {
+    h = renderLib();
+
+  } else if (view === 'list') {
+    const found = searchTasks($('#q').value);
+    if (found) {
+      h = searchHtml(found);
+    } else {
+      const dates = [...new Set(S.tasks.filter(t => t.date >= today()).map(t => t.date))].sort();
+      h = dates.length ? dates.map(dayBlock).join('') : '<p class="hint">Заданий пока нет</p>';
+    }
 
   } else if (view === 'week') {
     const st = addD(cur, -((D(cur).getDay() + 6) % 7));
@@ -148,8 +210,11 @@ function render() {
     h += '<div></div>'.repeat(lead);
     for (let i = 1; i <= n; i++) {
       const s = F(new Date(y, m, i));
-      h += '<div class="cell ' + (S.tasks.some(t => t.date === s) ? 'has ' : '') + (s === sel ? 'sel ' : '') +
-        (s === today() ? 'today' : '') + '" onclick="sel=\'' + s + '\';render()">' + i + '</div>';
+      // кружки — только для заданий с отметкой «домашнее задание», по порядку расписания, цвет = сложность
+      const dots = dayTasks(s).filter(isHw)
+        .map(t => '<span class="dot sm ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'none') + '"></span>').join('');
+      h += '<div class="cell ' + (s === sel ? 'sel ' : '') + (s === today() ? 'today' : '') +
+        '" onclick="sel=\'' + s + '\';render()">' + i + '<div class="dots">' + dots + '</div></div>';
     }
     h += '</div><div style="height:10px"></div>' + dayBlock(sel);
   }
@@ -167,18 +232,20 @@ const closeM = () => $('#modal').style.display = 'none';
 $('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
 
 function openEdit(id) {
-  const t = S.tasks.find(x => x.id === id) || {date: sel, time: '09:00', difficulty: 'medium'};
-  const diff = t.difficulty || 'medium';
+  const t = S.tasks.find(x => x.id === id) || {date: sel, time: '09:00', difficulty: '', hw: '1'};
+  const diff = difficultyLabel(t.difficulty) ? t.difficulty : '';
   modal(
     '<h3>' + (id ? 'Редактировать' : 'Новое задание') + '</h3>' +
     '<input id="f_s" placeholder="Предмет" value="' + esc(t.subject || '') + '">' +
     '<input id="f_d" type="date" value="' + esc(t.date || today()) + '">' +
     '<input id="f_t" type="time" value="' + esc(t.time || '09:00') + '">' +
     '<select id="f_diff">' +
+      '<option value=""' + (diff === '' ? ' selected' : '') + '>Сложность не выбрана</option>' +
       '<option value="easy"' + (diff === 'easy' ? ' selected' : '') + '>Легкий</option>' +
       '<option value="medium"' + (diff === 'medium' ? ' selected' : '') + '>Средний</option>' +
       '<option value="hard"' + (diff === 'hard' ? ' selected' : '') + '>Тяжелый</option>' +
     '</select>' +
+    '<label class="chk"><input type="checkbox" id="f_hw"' + (isHw(t) ? ' checked' : '') + '>📝 Есть домашнее задание</label>' +
     '<textarea id="f_x" rows="4" placeholder="Что задано">' + esc(t.description || '') + '</textarea>' +
     '<button class="btn" onclick="save(\'' + esc(id || '') + '\')">Сохранить</button>' +
     (id ? '<button class="btn red" onclick="del(\'' + esc(id) + '\')">Удалить</button>' : '')
@@ -188,13 +255,117 @@ function openEdit(id) {
 async function save(id) {
   const result = await api('save', {task: {
     id, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value,
-    difficulty: $('#f_diff').value, description: $('#f_x').value.trim()
+    difficulty: $('#f_diff').value, hw: $('#f_hw').checked ? '1' : '', description: $('#f_x').value.trim()
   }});
   if (result) closeM();
 }
 
 function del(id) {
   tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } });
+}
+
+// ---------- Учебники: PDF, фото, аудио ----------
+let libTab = 'list', libF = 'all';
+const KICON = {book: '📕', photo: '🖼', audio: '🎧'};
+const MAX_FILE = 50 * 1024 * 1024, CHUNK = 786432; // кратно 256 КБ
+const dlUrl = fid => 'https://drive.google.com/uc?export=download&id=' + fid;
+const viewUrl = fid => 'https://drive.google.com/file/d/' + fid + '/view';
+const thumb = (fid, w) => 'https://drive.google.com/thumbnail?id=' + fid + '&sz=w' + w;
+const mb = n => (Number(n) / 1048576).toFixed(1) + ' МБ';
+const EXT = {pdf:'application/pdf', jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', heic:'image/heic', gif:'image/gif',
+  mp3:'audio/mpeg', m4a:'audio/mp4', wav:'audio/wav', ogg:'audio/ogg', oga:'audio/ogg', opus:'audio/ogg', aac:'audio/aac'};
+
+function openLib() { view = 'lib'; libTab = 'list'; render(); }
+
+function renderLib() {
+  let h = '<div class="bar"><button class="tab ' + (libTab === 'list' ? 'on' : '') + '" onclick="libTab=\'list\';render()">📚 Материалы</button>' +
+    '<button class="tab ' + (libTab === 'up' ? 'on' : '') + '" onclick="libTab=\'up\';render()">⬆️ Загрузить</button></div>';
+
+  if (libTab === 'up') {
+    return h + '<h3>Новый материал</h3>' +
+      '<input id="u_file" type="file" accept=".pdf,application/pdf,image/*,audio/*">' +
+      '<input id="u_title" maxlength="120" placeholder="Подпись (например: Математика, учебник 10 класс)">' +
+      '<div class="prog" id="u_prog" style="display:none"><div id="u_bar"></div></div>' +
+      '<div class="hint" id="u_txt"></div>' +
+      '<button class="btn" id="u_btn" onclick="doUpload()">Загрузить</button>' +
+      '<p class="hint">PDF, фото и аудио до 50 МБ. Не закрывайте приложение, пока идёт загрузка.</p>';
+  }
+
+  const FILT = [['all', 'Все'], ['book', '📕 Книги'], ['photo', '🖼 Фото'], ['audio', '🎧 Аудио']];
+  h += '<div>' + FILT.map(([k, l]) => '<button class="chip ' + (libF === k ? 'on' : '') + '" onclick="libF=\'' + k + '\';render()">' + l + '</button>').join('') + '</div>';
+  const list = (S.files || []).filter(f => libF === 'all' || f.kind === libF);
+  return h + (list.length ? list.map(fileCard).join('') : '<p class="hint">Пока ничего нет. Загрузите первый материал во вкладке «Загрузить».</p>');
+}
+
+function fileCard(f) {
+  const th = f.kind === 'photo' ? '<img class="th" loading="lazy" src="' + esc(thumb(f.file_id, 200)) + '">' : '<div class="ic">' + (KICON[f.kind] || '📄') + '</div>';
+  return '<div class="card item" onclick="openFile(\'' + esc(f.id) + '\')">' + th + '<div><b>' + esc(f.title) + '</b><br><small>' +
+    esc(f.name) + ' · ' + mb(f.size) + '<br>— ' + esc(f.author) + ', ' + esc(f.date) + '</small></div></div>';
+}
+
+function openFile(id) {
+  const f = (S.files || []).find(x => x.id === id);
+  if (!f) return;
+  const fid = f.file_id;
+  let body;
+  if (f.kind === 'book') body = '<iframe class="pdf" src="https://drive.google.com/file/d/' + esc(fid) + '/preview"></iframe>';
+  else if (f.kind === 'photo') body = '<img class="ph" src="' + esc(thumb(fid, 1600)) + '">';
+  else body = '<audio controls preload="none" src="' + esc(dlUrl(fid)) + '"></audio><p class="hint">Если запись не играет, нажмите «Открыть в браузере».</p>';
+  modal('<h3>' + esc(f.title) + '</h3>' + body +
+    '<button class="btn" onclick="tg.openLink(\'' + esc(dlUrl(fid)) + '\')">⬇️ Скачать</button>' +
+    '<button class="btn" onclick="tg.openLink(\'' + esc(viewUrl(fid)) + '\')">🌐 Открыть в браузере</button>' +
+    '<button class="btn red" onclick="delFile(\'' + esc(f.id) + '\')">Удалить</button>');
+}
+
+function delFile(id) {
+  tg.showConfirm('Удалить файл?', ok => { if (ok) { api('deleteFile', {id}); closeM(); } });
+}
+
+const toB64 = blob => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(',')[1]);
+  r.onerror = () => rej(r.error);
+  r.readAsDataURL(blob);
+});
+
+async function doUpload() {
+  const f = $('#u_file').files[0], title = $('#u_title').value.trim();
+  const err = m => { $('#err').textContent = m; };
+  err('');
+  if (!f) return err('Выберите файл.');
+  if (!title) return err('Добавьте подпись.');
+  if (f.size > MAX_FILE) return err('Файл больше 50 МБ.');
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  const mime = f.type || EXT[ext] || '';
+  const kind = mime === 'application/pdf' ? 'book' : mime.startsWith('image/') ? 'photo' : mime.startsWith('audio/') ? 'audio' : '';
+  if (!kind) return err('Поддерживаются только PDF, фото и аудио.');
+
+  const btn = $('#u_btn');
+  btn.disabled = true; btn.textContent = 'Загрузка...';
+  $('#u_prog').style.display = 'block';
+  try {
+    const st = await api('uploadStart', {name: f.name, mime, size: f.size, kind, title}, true);
+    if (!st) throw new Error('не удалось начать загрузку');
+    let off = 0, last = null;
+    while (off < f.size) {
+      const end = Math.min(off + CHUNK, f.size);
+      const data = await toB64(f.slice(off, end));
+      for (let attempt = 0; attempt < 2 && !last; attempt++) {
+        const r = await api('uploadChunk', {uploadId: st.uploadId, offset: off, total: f.size, data}, true);
+        if (r) { last = r; break; }
+        if (attempt === 1) throw new Error('загрузка прервана');
+        last = null;
+      }
+      off = end;
+      $('#u_bar').style.width = Math.round(off / f.size * 100) + '%';
+      $('#u_txt').textContent = mb(off) + ' из ' + mb(f.size);
+      if (!last.done) last = null;
+    }
+    S = last; libTab = 'list'; render();
+  } catch (e) {
+    err('Ошибка: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Загрузить';
+  }
 }
 
 // ---------- Напоминания ----------
@@ -217,7 +388,7 @@ function tgl(m, el) {
   el.classList.toggle('on');
 }
 
-document.querySelectorAll('.tab[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; cur = today(); sel = today(); render(); });
+document.querySelectorAll('.tab[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; cur = today(); sel = today(); $('#q').value = ''; render(); });
 api('list');
 </script>
 </body>
