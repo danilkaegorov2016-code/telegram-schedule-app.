@@ -35,16 +35,14 @@ small,.hint{color:var(--muted);font-size:14px}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
 .cell{padding:8px 0 6px;border-radius:9px;font-size:15px;background:var(--surface);min-height:52px}
 .cell.sel{background:var(--accent);color:#fff}
-.dots{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:4px;min-height:8px;padding:0 2px}
+.dots{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:4px;min-height:7px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
-.dot.sm{width:8px;height:8px}
+.dot.sm{width:7px;height:7px}
+.dot.base{background:#c1876b}
 .dot.easy{background:#78a5a3}
 .dot.medium{background:#e1b16a}
 .dot.hard{background:#ce5a57}
-.dot.none{background:#fff;border:2px solid var(--accent)}
-.dot.blank{background:transparent}
 .cell.sel .dot{box-shadow:0 0 0 1.5px #fff}
-.cell.sel .dot.none{background:transparent;border-color:#fff}
 .cell.today{font-weight:800;text-decoration:underline}
 .weekday{padding:5px 0;font-size:13px;color:var(--muted)}
 #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:flex-end;z-index:9}
@@ -53,7 +51,12 @@ input,textarea,select{width:100%;padding:11px;margin:5px 0 9px;border-radius:9px
 .chip{display:inline-block;margin:0 7px 7px 0;cursor:pointer}
 #err{color:#c62828;margin:7px 0;line-height:1.35}
 #searchBar{display:none}
-#searchBar input{margin:0 0 12px}
+#searchBar input,#libSearch input{margin:0 0 12px}
+#libSearch{display:none}
+.area{position:relative}
+.area textarea{padding-right:50px}
+.clip{position:absolute;top:8px;right:8px;border:0;border-radius:8px;background:var(--soft);font-size:20px;line-height:1;padding:6px 8px;cursor:pointer}
+.att{padding:9px 11px;background:#fff;border-radius:9px;margin:0 0 6px;font-size:15px;cursor:pointer}
 .chk{display:flex;align-items:center;margin:4px 0 10px;font-size:17px}
 .chk input{width:22px;height:22px;margin:0 10px 0 0;padding:0;flex:none}
 #bottom{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);box-shadow:0 -6px 12px -6px rgba(0,0,0,.18)}
@@ -78,6 +81,7 @@ audio{width:100%;margin:6px 0}
 </div>
 <div id="err"></div>
 <div id="searchBar"><input id="q" type="search" autocomplete="off" placeholder="🔍 Поиск: предмет, преподаватель, аудитория, дата" oninput="render()"></div>
+<div id="libSearch"><input id="qLib" type="search" autocomplete="off" placeholder="🔍 Поиск в материалах: подпись, файл, автор, предмет" oninput="render()"></div>
 <div id="main">Загрузка...</div>
 <div id="bottom">
   <button class="btn" id="addBtn" onclick="openEdit()">+ Добавить</button>
@@ -101,8 +105,9 @@ const fmt = s => D(s).toLocaleDateString('ru-RU', {weekday: 'short', day: 'numer
 
 let S = {tasks: [], rem: [1440, 60], files: []}, view = 'list', cur = today(), sel = today();
 
+let lastErr = '';
 async function api(action, data = {}, raw = false) {
-  $('#err').textContent = '';
+  $('#err').textContent = ''; lastErr = '';
   try {
     if (!tg.initData) throw new Error('Telegram initData не получен. Откройте приложение из Telegram.');
     const r = await fetch(API, {
@@ -116,6 +121,7 @@ async function api(action, data = {}, raw = false) {
     S = j; render();
     return j;
   } catch (e) {
+    lastErr = e.message;
     $('#err').textContent = 'Ошибка: ' + e.message;
     if (!S.tasks.length) $('#main').textContent = '';
     return null;
@@ -133,6 +139,7 @@ function card(t) {
   return '<div class="card" onclick="openEdit(\'' + id + '\')">' +
     '<div class="meta"><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' +
     (isHw(t) ? '<span title="Домашнее задание">📝</span>' : '') +
+    (attFiles(t.id).length ? '<span title="Прикреплённые файлы">📎' + attFiles(t.id).length + '</span>' : '') +
     (diff ? '<span class="difficulty ' + diff + '">' + difficultyLabel(diff) + '</span>' : '') +
     '<span class="edit" onclick="event.stopPropagation();openEdit(\'' + id + '\')">✏️</span></div>' +
     (t.description ? '<p>' + esc(t.description) + '</p>' : '') +
@@ -146,7 +153,7 @@ const dayBlock = d => '<section class="day-block"><h3>' + esc(fmt(d)) + '</h3>' 
 function weekBlock(d) {
   const l = dayTasks(d);
   return '<section class="day-block click" onclick="openDay(\'' + d + '\')"><h3>' + esc(fmt(d)) + '</h3>' +
-    (l.length ? l.map(t => '<div class="mini"><span class="dot ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'blank') + '"></span><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' + (isHw(t) ? '<span>📝</span>' : '') + '</div>').join('')
+    (l.length ? l.map(t => '<div class="mini"><span class="dot ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'base') + '"></span><b>' + esc(t.subject) + '</b><small>' + esc(t.time) + '</small>' + (isHw(t) ? '<span>📝</span>' : '') + '</div>').join('')
               : '<small>Пусто</small>') + '</section>';
 }
 
@@ -180,6 +187,7 @@ function render() {
   $('#libBtn').classList.toggle('on', view === 'lib');
   $('#addBtn').style.display = view === 'lib' ? 'none' : '';
   $('#searchBar').style.display = view === 'list' ? 'block' : 'none';
+  $('#libSearch').style.display = (view === 'lib' && libTab === 'list') ? 'block' : 'none';
   let h = '';
 
   if (view === 'lib') {
@@ -210,9 +218,9 @@ function render() {
     h += '<div></div>'.repeat(lead);
     for (let i = 1; i <= n; i++) {
       const s = F(new Date(y, m, i));
-      // кружки — только для заданий с отметкой «домашнее задание», по порядку расписания, цвет = сложность
-      const dots = dayTasks(s).filter(isHw)
-        .map(t => '<span class="dot sm ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'none') + '"></span>').join('');
+      // по кружку на каждую пару/задание дня, по порядку расписания; цвет #c1876b, а после выбора сложности — цвет сложности
+      const dots = dayTasks(s)
+        .map(t => '<span class="dot sm ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'base') + '"></span>').join('');
       h += '<div class="cell ' + (s === sel ? 'sel ' : '') + (s === today() ? 'today' : '') +
         '" onclick="sel=\'' + s + '\';render()">' + i + '<div class="dots">' + dots + '</div></div>';
     }
@@ -231,11 +239,19 @@ const modal = html => { $('#box').innerHTML = html; $('#modal').style.display = 
 const closeM = () => $('#modal').style.display = 'none';
 $('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
 
+let FORM = {id: '', isNew: true};
+const hex8 = () => Array.from({length: 8}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+const attFiles = tid => (S.files || []).filter(f => f.task_id === tid);
+const attHtml = () => attFiles(FORM.id).map(f => '<div class="att" onclick="tg.openLink(\'' + esc(viewUrl(f.file_id)) + '\')">' +
+  (KICON[f.kind] || '📄') + ' ' + esc(f.title) + '</div>').join('');
+
 function openEdit(id) {
-  const t = S.tasks.find(x => x.id === id) || {date: sel, time: '09:00', difficulty: '', hw: '1'};
+  const old = id ? S.tasks.find(x => x.id === id) : null;
+  const t = old || {date: sel, time: '09:00', difficulty: '', hw: '1'};
+  FORM = old ? {id: old.id, isNew: false} : {id: hex8(), isNew: true}; // у нового задания id выдаём заранее — для вложений
   const diff = difficultyLabel(t.difficulty) ? t.difficulty : '';
   modal(
-    '<h3>' + (id ? 'Редактировать' : 'Новое задание') + '</h3>' +
+    '<h3>' + (old ? 'Редактировать' : 'Новое задание') + '</h3>' +
     '<input id="f_s" placeholder="Предмет" value="' + esc(t.subject || '') + '">' +
     '<input id="f_d" type="date" value="' + esc(t.date || today()) + '">' +
     '<input id="f_t" type="time" value="' + esc(t.time || '09:00') + '">' +
@@ -246,18 +262,39 @@ function openEdit(id) {
       '<option value="hard"' + (diff === 'hard' ? ' selected' : '') + '>Тяжелый</option>' +
     '</select>' +
     '<label class="chk"><input type="checkbox" id="f_hw"' + (isHw(t) ? ' checked' : '') + '>📝 Есть домашнее задание</label>' +
-    '<textarea id="f_x" rows="4" placeholder="Что задано">' + esc(t.description || '') + '</textarea>' +
-    '<button class="btn" onclick="save(\'' + esc(id || '') + '\')">Сохранить</button>' +
-    (id ? '<button class="btn red" onclick="del(\'' + esc(id) + '\')">Удалить</button>' : '')
+    '<div class="area"><textarea id="f_x" rows="4" placeholder="Что задано">' + esc(t.description || '') + '</textarea>' +
+      '<button type="button" class="clip" title="Прикрепить файл" onclick="$(\'#att_file\').click()">📎</button></div>' +
+    '<input type="file" id="att_file" style="display:none" accept=".pdf,application/pdf,image/*,audio/*" onchange="attachFile(this)">' +
+    '<div id="attMsg" class="hint"></div><div id="attList">' + attHtml() + '</div>' +
+    '<button class="btn" onclick="save()">Сохранить</button>' +
+    (old ? '<button class="btn red" onclick="del(\'' + esc(old.id) + '\')">Удалить</button>' : '')
   );
 }
 
-async function save(id) {
+async function save() {
   const result = await api('save', {task: {
-    id, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value,
+    id: FORM.id, isNew: FORM.isNew, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value,
     difficulty: $('#f_diff').value, hw: $('#f_hw').checked ? '1' : '', description: $('#f_x').value.trim()
   }});
   if (result) closeM();
+}
+
+// 📎 в описании: файл загружается в «Учебники» и привязывается к этому заданию
+async function attachFile(inp) {
+  const f = inp.files && inp.files[0];
+  inp.value = '';
+  if (!f) return;
+  const msg = $('#attMsg');
+  const subj = $('#f_s').value.trim(), base = f.name.replace(/\.[^.]+$/, '');
+  msg.textContent = 'Загрузка…';
+  try {
+    const last = await uploadOne(f, subj ? subj + ' · ' + base : base, FORM.id,
+      (o, t) => { msg.textContent = 'Загрузка ' + Math.round(o / t * 100) + '%'; });
+    S = last; render();
+    if ($('#attList')) { $('#attList').innerHTML = attHtml(); $('#attMsg').textContent = '✅ Файл прикреплён и добавлен в «Учебники»'; }
+  } catch (e) {
+    if ($('#attMsg')) $('#attMsg').textContent = 'Ошибка: ' + e.message;
+  }
 }
 
 function del(id) {
@@ -275,7 +312,7 @@ const mb = n => (Number(n) / 1048576).toFixed(1) + ' МБ';
 const EXT = {pdf:'application/pdf', jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', heic:'image/heic', gif:'image/gif',
   mp3:'audio/mpeg', m4a:'audio/mp4', wav:'audio/wav', ogg:'audio/ogg', oga:'audio/ogg', opus:'audio/ogg', aac:'audio/aac'};
 
-function openLib() { view = 'lib'; libTab = 'list'; render(); }
+function openLib() { view = 'lib'; libTab = 'list'; $('#qLib').value = ''; render(); }
 
 function renderLib() {
   let h = '<div class="bar"><button class="tab ' + (libTab === 'list' ? 'on' : '') + '" onclick="libTab=\'list\';render()">📚 Материалы</button>' +
@@ -293,14 +330,32 @@ function renderLib() {
 
   const FILT = [['all', 'Все'], ['book', '📕 Книги'], ['photo', '🖼 Фото'], ['audio', '🎧 Аудио']];
   h += '<div>' + FILT.map(([k, l]) => '<button class="chip ' + (libF === k ? 'on' : '') + '" onclick="libF=\'' + k + '\';render()">' + l + '</button>').join('') + '</div>';
-  const list = (S.files || []).filter(f => libF === 'all' || f.kind === libF);
-  return h + (list.length ? list.map(fileCard).join('') : '<p class="hint">Пока ничего нет. Загрузите первый материал во вкладке «Загрузить».</p>');
+  const list = libFiltered();
+  const searching = $('#qLib').value.trim() !== '';
+  return h + (list.length ? list.map(fileCard).join('')
+    : searching ? '<p class="hint">Ничего не найдено</p>'
+    : '<p class="hint">Пока ничего нет. Загрузите первый материал во вкладке «Загрузить».</p>');
+}
+
+const KWORD = {book: 'книга учебник pdf', photo: 'фото изображение', audio: 'аудио запись конспект'};
+
+// Фильтр по виду + поиск по словам (подпись, имя файла, автор, дата, предмет задания)
+function libFiltered() {
+  const words = norm($('#qLib').value).split(/\s+/).filter(Boolean);
+  return (S.files || []).filter(f => {
+    if (libF !== 'all' && f.kind !== libF) return false;
+    const tk = S.tasks.find(t => t.id === f.task_id);
+    const hay = norm([f.title, f.name, f.author, f.date, KWORD[f.kind], tk ? tk.subject + ' ' + fmt(tk.date) : ''].join(' '));
+    return words.every(w => hay.includes(w));
+  });
 }
 
 function fileCard(f) {
+  const tk = f.task_id ? S.tasks.find(t => t.id === f.task_id) : null;
   const th = f.kind === 'photo' ? '<img class="th" loading="lazy" src="' + esc(thumb(f.file_id, 200)) + '">' : '<div class="ic">' + (KICON[f.kind] || '📄') + '</div>';
   return '<div class="card item" onclick="openFile(\'' + esc(f.id) + '\')">' + th + '<div><b>' + esc(f.title) + '</b><br><small>' +
-    esc(f.name) + ' · ' + mb(f.size) + '<br>— ' + esc(f.author) + ', ' + esc(f.date) + '</small></div></div>';
+    esc(f.name) + ' · ' + mb(f.size) + '<br>— ' + esc(f.author) + ', ' + esc(f.date) +
+    (tk ? '<br>📎 к заданию: ' + esc(tk.subject) + ', ' + esc(fmt(tk.date)) : '') + '</small></div></div>';
 }
 
 function openFile(id) {
@@ -328,40 +383,49 @@ const toB64 = blob => new Promise((res, rej) => {
   r.readAsDataURL(blob);
 });
 
+// Загрузка одного файла по частям. Возвращает свежее состояние с сервера.
+async function uploadOne(f, title, taskId, onProgress) {
+  if (!f.size) throw new Error('Файл пустой.');
+  if (f.size > MAX_FILE) throw new Error('Файл больше 50 МБ.');
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  const mime = f.type || EXT[ext] || '';
+  const kind = mime === 'application/pdf' ? 'book' : mime.startsWith('image/') ? 'photo' : mime.startsWith('audio/') ? 'audio' : '';
+  if (!kind) throw new Error('Поддерживаются только PDF, фото и аудио.');
+
+  const st = await api('uploadStart', {name: f.name, mime, size: f.size, kind, title, task_id: taskId || ''}, true);
+  if (!st) throw new Error(lastErr || 'не удалось начать загрузку');
+  let off = 0, last = null;
+  while (off < f.size) {
+    const end = Math.min(off + CHUNK, f.size);
+    const data = await toB64(f.slice(off, end));
+    let r = null;
+    for (let attempt = 0; attempt < 2 && !r; attempt++) {
+      r = await api('uploadChunk', {uploadId: st.uploadId, offset: off, total: f.size, data}, true);
+    }
+    if (!r) throw new Error(lastErr || 'загрузка прервана');
+    off = end;
+    if (onProgress) onProgress(off, f.size);
+    if (r.done) last = r;
+  }
+  if (!last) throw new Error('сервер не подтвердил загрузку');
+  return last;
+}
+
 async function doUpload() {
   const f = $('#u_file').files[0], title = $('#u_title').value.trim();
   const err = m => { $('#err').textContent = m; };
   err('');
   if (!f) return err('Выберите файл.');
   if (!title) return err('Добавьте подпись.');
-  if (f.size > MAX_FILE) return err('Файл больше 50 МБ.');
-  const ext = (f.name.split('.').pop() || '').toLowerCase();
-  const mime = f.type || EXT[ext] || '';
-  const kind = mime === 'application/pdf' ? 'book' : mime.startsWith('image/') ? 'photo' : mime.startsWith('audio/') ? 'audio' : '';
-  if (!kind) return err('Поддерживаются только PDF, фото и аудио.');
-
   const btn = $('#u_btn');
   btn.disabled = true; btn.textContent = 'Загрузка...';
   $('#u_prog').style.display = 'block';
   try {
-    const st = await api('uploadStart', {name: f.name, mime, size: f.size, kind, title}, true);
-    if (!st) throw new Error('не удалось начать загрузку');
-    let off = 0, last = null;
-    while (off < f.size) {
-      const end = Math.min(off + CHUNK, f.size);
-      const data = await toB64(f.slice(off, end));
-      for (let attempt = 0; attempt < 2 && !last; attempt++) {
-        const r = await api('uploadChunk', {uploadId: st.uploadId, offset: off, total: f.size, data}, true);
-        if (r) { last = r; break; }
-        if (attempt === 1) throw new Error('загрузка прервана');
-        last = null;
-      }
-      off = end;
-      $('#u_bar').style.width = Math.round(off / f.size * 100) + '%';
-      $('#u_txt').textContent = mb(off) + ' из ' + mb(f.size);
-      if (!last.done) last = null;
-    }
-    S = last; libTab = 'list'; render();
+    S = await uploadOne(f, title, '', (o, t) => {
+      $('#u_bar').style.width = Math.round(o / t * 100) + '%';
+      $('#u_txt').textContent = mb(o) + ' из ' + mb(t);
+    });
+    libTab = 'list'; render();
   } catch (e) {
     err('Ошибка: ' + e.message);
     btn.disabled = false; btn.textContent = 'Загрузить';
