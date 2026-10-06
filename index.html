@@ -29,19 +29,19 @@ small,.hint{color:var(--muted);font-size:14px}
 .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .edit{margin-left:auto;font-size:18px;padding:2px 6px;cursor:pointer}
 .difficulty{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
-.difficulty.easy{background:#78a5a3}
-.difficulty.medium{background:#e1b16a}
-.difficulty.hard{background:#ce5a57}
+.difficulty.easy{background:#27C93F}
+.difficulty.medium{background:#ffbd2e;color:#3a2a00}
+.difficulty.hard{background:#ff605c}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
 .cell{padding:8px 0 6px;border-radius:9px;font-size:15px;background:var(--surface);min-height:52px}
 .cell.sel{background:var(--accent);color:#fff}
 .dots{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:4px;min-height:7px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
 .dot.sm{width:7px;height:7px}
-.dot.base{background:#c1876b}
-.dot.easy{background:#78a5a3}
-.dot.medium{background:#e1b16a}
-.dot.hard{background:#ce5a57}
+.dot.base{background:#baaf96}
+.dot.easy{background:#27C93F}
+.dot.medium{background:#ffbd2e}
+.dot.hard{background:#ff605c}
 .cell.sel .dot{box-shadow:0 0 0 1.5px #fff}
 .cell.today{font-weight:800;text-decoration:underline}
 .weekday{padding:5px 0;font-size:13px;color:var(--muted)}
@@ -80,6 +80,7 @@ audio{width:100%;margin:6px 0}
   <button class="tab" id="bell">🔔</button>
 </div>
 <div id="err"></div>
+<div id="sync" class="hint"></div>
 <div id="searchBar"><input id="q" type="search" autocomplete="off" placeholder="🔍 Поиск: предмет, преподаватель, аудитория, дата" oninput="render()"></div>
 <div id="libSearch"><input id="qLib" type="search" autocomplete="off" placeholder="🔍 Поиск в материалах: подпись, файл, автор, предмет" oninput="render()"></div>
 <div id="main">Загрузка...</div>
@@ -105,6 +106,14 @@ const fmt = s => D(s).toLocaleDateString('ru-RU', {weekday: 'short', day: 'numer
 
 let S = {tasks: [], rem: [1440, 60], files: []}, view = 'list', cur = today(), sel = today();
 
+// Быстрый старт: данные сохраняются на телефоне и показываются сразу, пока сервер отвечает
+const cacheKey = 'sched_v1_' + ((tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || 'u');
+function saveCache() { try { localStorage.setItem(cacheKey, JSON.stringify({tasks: S.tasks, rem: S.rem, files: S.files || []})); } catch (e) {} }
+function loadCache() {
+  try { const j = JSON.parse(localStorage.getItem(cacheKey) || 'null'); return j && Array.isArray(j.tasks) ? j : null; } catch (e) { return null; }
+}
+const myName = () => (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Вы';
+
 let lastErr = '';
 async function api(action, data = {}, raw = false) {
   $('#err').textContent = ''; lastErr = '';
@@ -118,7 +127,7 @@ async function api(action, data = {}, raw = false) {
     const j = await r.json();
     if (j.error) throw new Error(j.error);
     if (raw) return j;
-    S = j; render();
+    S = j; saveCache(); render();
     return j;
   } catch (e) {
     lastErr = e.message;
@@ -218,7 +227,7 @@ function render() {
     h += '<div></div>'.repeat(lead);
     for (let i = 1; i <= n; i++) {
       const s = F(new Date(y, m, i));
-      // по кружку на каждую пару/задание дня, по порядку расписания; цвет #c1876b, а после выбора сложности — цвет сложности
+      // по кружку на каждую пару/задание дня, по порядку расписания; цвет #baaf96, а после выбора сложности — цвет сложности
       const dots = dayTasks(s)
         .map(t => '<span class="dot sm ' + (difficultyLabel(t.difficulty) ? t.difficulty : 'base') + '"></span>').join('');
       h += '<div class="cell ' + (s === sel ? 'sel ' : '') + (s === today() ? 'today' : '') +
@@ -239,7 +248,7 @@ const modal = html => { $('#box').innerHTML = html; $('#modal').style.display = 
 const closeM = () => $('#modal').style.display = 'none';
 $('#modal').onclick = e => { if (e.target.id === 'modal') closeM(); };
 
-let FORM = {id: '', isNew: true};
+let FORM = {id: '', isNew: true, attached: false};
 const hex8 = () => Array.from({length: 8}, () => Math.floor(Math.random() * 16).toString(16)).join('');
 const attFiles = tid => (S.files || []).filter(f => f.task_id === tid);
 const attHtml = () => attFiles(FORM.id).map(f => '<div class="att" onclick="tg.openLink(\'' + esc(viewUrl(f.file_id)) + '\')">' +
@@ -248,7 +257,7 @@ const attHtml = () => attFiles(FORM.id).map(f => '<div class="att" onclick="tg.o
 function openEdit(id) {
   const old = id ? S.tasks.find(x => x.id === id) : null;
   const t = old || {date: sel, time: '09:00', difficulty: '', hw: '1'};
-  FORM = old ? {id: old.id, isNew: false} : {id: hex8(), isNew: true}; // у нового задания id выдаём заранее — для вложений
+  FORM = old ? {id: old.id, isNew: false, attached: false} : {id: hex8(), isNew: true, attached: false}; // у нового задания id выдаём заранее — для вложений
   const diff = difficultyLabel(t.difficulty) ? t.difficulty : '';
   modal(
     '<h3>' + (old ? 'Редактировать' : 'Новое задание') + '</h3>' +
@@ -271,12 +280,18 @@ function openEdit(id) {
   );
 }
 
+// Сохранение «сразу»: результат виден мгновенно, сервер догоняет в фоне
 async function save() {
-  const result = await api('save', {task: {
-    id: FORM.id, isNew: FORM.isNew, subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value,
-    difficulty: $('#f_diff').value, hw: $('#f_hw').checked ? '1' : '', description: $('#f_x').value.trim()
-  }});
-  if (result) closeM();
+  const f = FORM;
+  const t = {subject: $('#f_s').value.trim(), date: $('#f_d').value, time: $('#f_t').value,
+    difficulty: $('#f_diff').value, hw: $('#f_hw').checked ? '1' : '', description: $('#f_x').value.trim()};
+  if (!t.subject || !t.date || !t.time) { $('#attMsg').textContent = 'Укажите предмет, дату и время.'; return; }
+  const i = S.tasks.findIndex(x => x.id === f.id);
+  if (i >= 0) Object.assign(S.tasks[i], t); else S.tasks.push({id: f.id, author: myName(), ...t});
+  render(); closeM();
+  // у нового задания id отправляем, только если к нему уже прикреплены файлы
+  const res = await api('save', {task: {id: (f.isNew && !f.attached) ? '' : f.id, isNew: f.isNew, ...t}});
+  if (!res) { const m = $('#err').textContent; await api('list'); $('#err').textContent = m; }
 }
 
 // 📎 в описании: файл загружается в «Учебники» и привязывается к этому заданию
@@ -290,7 +305,8 @@ async function attachFile(inp) {
   try {
     const last = await uploadOne(f, subj ? subj + ' · ' + base : base, FORM.id,
       (o, t) => { msg.textContent = 'Загрузка ' + Math.round(o / t * 100) + '%'; });
-    S = last; render();
+    S = last; saveCache(); render();
+    FORM.attached = true;
     if ($('#attList')) { $('#attList').innerHTML = attHtml(); $('#attMsg').textContent = '✅ Файл прикреплён и добавлен в «Учебники»'; }
   } catch (e) {
     if ($('#attMsg')) $('#attMsg').textContent = 'Ошибка: ' + e.message;
@@ -298,7 +314,12 @@ async function attachFile(inp) {
 }
 
 function del(id) {
-  tg.showConfirm('Удалить задание?', ok => { if (ok) { api('delete', {id}); closeM(); } });
+  tg.showConfirm('Удалить задание?', async ok => {
+    if (!ok) return;
+    S.tasks = S.tasks.filter(x => x.id !== id); render(); closeM();
+    const res = await api('delete', {id});
+    if (!res) { const m = $('#err').textContent; await api('list'); $('#err').textContent = m; }
+  });
 }
 
 // ---------- Учебники: PDF, фото, аудио ----------
@@ -425,7 +446,7 @@ async function doUpload() {
       $('#u_bar').style.width = Math.round(o / t * 100) + '%';
       $('#u_txt').textContent = mb(o) + ' из ' + mb(t);
     });
-    libTab = 'list'; render();
+    saveCache(); libTab = 'list'; render();
   } catch (e) {
     err('Ошибка: ' + e.message);
     btn.disabled = false; btn.textContent = 'Загрузить';
@@ -443,8 +464,8 @@ $('#bell').onclick = () => {
 };
 
 async function saveReminders() {
-  const result = await api('setReminders', {rem: S.rem});
-  if (result) closeM();
+  closeM();
+  await api('setReminders', {rem: S.rem});
 }
 
 function tgl(m, el) {
@@ -453,7 +474,14 @@ function tgl(m, el) {
 }
 
 document.querySelectorAll('.tab[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; cur = today(); sel = today(); $('#q').value = ''; render(); });
-api('list');
+
+const cached = loadCache();
+if (cached) {
+  S = {tasks: cached.tasks, rem: cached.rem || [1440, 60], files: cached.files || []};
+  render();
+  $('#sync').textContent = 'Обновляем…';
+}
+api('list').then(() => { $('#sync').textContent = ''; });
 </script>
 </body>
 </html>
